@@ -1,0 +1,154 @@
+{% extends "staff/base_staff.html" %}
+
+{% block title %}Bookings Ledger & Refund Queue — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-3);">
+  <div>
+    <span class="label-caps" style="color: var(--color-accent);">Operations</span>
+    <h1 style="font-size: 1.8rem; margin: var(--space-1) 0;">Bookings & Refund Queue</h1>
+    <p style="color: var(--color-muted); font-size: 0.92rem; margin: 0;">Audit guest reservations, monitor hold states, and execute customer refunds.</p>
+  </div>
+
+  <div style="display: flex; gap: var(--space-3); align-items: center;">
+    <form action="/staff/bookings/export-csv" method="get" style="margin: 0; display: flex; gap: 8px; align-items: center;">
+      <label for="export_date" style="font-size: 0.85rem; font-weight: 500;">Export Date:</label>
+      <input type="date" id="export_date" name="date_str" value="{{ selected_date_str }}" style="padding: 5px; font-family: inherit; font-size: 0.85rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+      <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85rem;">Export CSV</button>
+    </form>
+  </div>
+</div>
+
+{% if success_msg %}
+<div class="alert-banner alert-success">{{ success_msg }}</div>
+{% endif %}
+{% if error_msg %}
+<div class="alert-banner alert-error">{{ error_msg }}</div>
+{% endif %}
+
+<!-- Needs Refund Priority Section -->
+{% if refund_queue %}
+<div style="background: #FFF5F5; border: 1px solid #F5C6CB; border-radius: var(--radius-sm); padding: var(--space-5); margin-bottom: var(--space-6);">
+  <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--space-2);">
+    <div>
+      <span class="label-caps" style="color: #721C24;">Immediate Action Required</span>
+      <h2 style="font-size: 1.25rem; color: #721C24; margin: 4px 0 0;">Customer Refund Queue ({{ refund_queue|length }})</h2>
+    </div>
+    <span style="font-size: 0.85rem; color: #721C24;">Stale Hold / Over-allotment Payments</span>
+  </div>
+  <p style="font-size: 0.88rem; color: #721C24; margin-bottom: var(--space-3);">
+    These payments were captured after hold expiration when rooms were unavailable. Mark as refunded once the reversal has been dispatched.
+  </p>
+
+  <table class="ledger-table" style="background: #fff;">
+    <thead>
+      <tr>
+        <th>Payment ID</th>
+        <th>Booking Ref</th>
+        <th>Guest Name & Contact</th>
+        <th>Amount Due</th>
+        <th>Date Logged</th>
+        <th style="text-align: right;">Simulated Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in refund_queue %}
+      <tr>
+        <td><code>{{ item.payment.id }}</code></td>
+        <td><strong><a href="/booking/{{ item.booking.reference }}" target="_blank">{{ item.booking.reference }}</a></strong></td>
+        <td>
+          {{ item.booking.guest_name }}<br>
+          <small style="color: var(--color-muted);">{{ item.booking.guest_email }} &bull; {{ item.booking.guest_phone }}</small>
+        </td>
+        <td><strong style="color: #721C24;">{{ item.payment.amount_paise | format_paise }}</strong></td>
+        <td style="color: var(--color-muted); font-size: 0.85rem;">{{ item.payment.created_at.strftime("%d %b %Y, %H:%M") }}</td>
+        <td style="text-align: right;">
+          <form action="/staff/bookings/mark-refunded" method="post" style="display: inline; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="payment_id" value="{{ item.payment.id }}">
+            <button type="submit" class="btn btn-primary" style="background: #A63A2B; padding: 5px 12px; font-size: 0.82rem;">
+              Mark Refunded (Simulated)
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<!-- Booking Search & Filter Ledger -->
+<div style="background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-4);">
+  <form method="get" action="/staff/bookings" style="display: flex; gap: var(--space-3); align-items: end; flex-wrap: wrap; margin-bottom: var(--space-4);">
+    <div>
+      <label for="status" style="display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 2px;">Filter Status:</label>
+      <select id="status" name="status" style="padding: 6px 10px; font-family: inherit; font-size: 0.88rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+        <option value="">All Statuses</option>
+        <option value="confirmed" {% if filter_status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+        <option value="held" {% if filter_status == 'held' %}selected{% endif %}>Held</option>
+        <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+        <option value="expired" {% if filter_status == 'expired' %}selected{% endif %}>Expired</option>
+      </select>
+    </div>
+
+    <div>
+      <label for="filter_date" style="display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 2px;">Filter Date (Check-in):</label>
+      <input type="date" id="filter_date" name="filter_date" value="{{ filter_date_val }}" style="padding: 5px 8px; font-family: inherit; font-size: 0.88rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-secondary" style="padding: 6px 14px; font-size: 0.88rem;">Apply Filter</button>
+      <a href="/staff/bookings" style="font-size: 0.85rem; margin-left: 8px; color: var(--color-muted);">Reset</a>
+    </div>
+  </form>
+
+  <div style="overflow-x: auto;">
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Guest Details</th>
+          <th>Room</th>
+          <th>Dates</th>
+          <th>Guests</th>
+          <th>Total</th>
+          <th>Status</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bookings %}
+        <tr>
+          <td><strong><a href="/booking/{{ b.reference }}" target="_blank" style="font-family: monospace;">{{ b.reference }}</a></strong></td>
+          <td>
+            <strong>{{ b.guest_name }}</strong><br>
+            <span style="font-size: 0.82rem; color: var(--color-muted);">{{ b.guest_email }}</span>
+          </td>
+          <td>{{ b.room_type_id }}</td>
+          <td>{{ b.check_in.strftime("%d %b") }} &ndash; {{ b.check_out.strftime("%d %b %Y") }}</td>
+          <td>{{ b.num_guests }}</td>
+          <td><strong>{{ b.grand_total_paise | format_paise }}</strong></td>
+          <td>
+            {% if b.status == 'confirmed' %}
+            <span class="status-badge badge-confirmed">Confirmed</span>
+            {% elif b.status == 'held' %}
+            <span class="status-badge badge-held">Held</span>
+            {% elif b.status == 'cancelled' %}
+            <span class="status-badge" style="background:#eee; color:#666;">Cancelled</span>
+            {% elif b.status == 'expired' %}
+            <span class="status-badge" style="background:#eee; color:#888;">Expired</span>
+            {% endif %}
+          </td>
+          <td style="font-size: 0.82rem; color: var(--color-muted);">{{ b.created_at.strftime("%d %b, %H:%M") }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align: center; color: var(--color-muted); padding: var(--space-4);">No bookings found matching filter criteria.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

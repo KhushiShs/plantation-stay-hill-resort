@@ -29,3 +29,4 @@ with sync_playwright() as p:
 
     browser.close()
     print("Desktop screenshots captured successfully!")
+

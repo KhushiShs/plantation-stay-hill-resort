@@ -201,8 +201,24 @@ class Payment(Base):
     booking: Mapped["Booking"] = relationship(back_populates="payments")
 
     __table_args__ = (
-        CheckConstraint("status IN ('pending', 'success', 'failed', 'needs_refund')", name="chk_payment_status"),
+        CheckConstraint("status IN ('pending', 'success', 'failed', 'needs_refund', 'refunded')", name="chk_payment_status"),
     )
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    user_role: Mapped[str] = mapped_column(String(32), nullable=False)
+    user_name: Mapped[str] = mapped_column(String(100), nullable=False)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    user: Mapped[Optional["User"]] = relationship()
 
 
 class Enquiry(Base):

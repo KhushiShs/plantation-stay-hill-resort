@@ -6,8 +6,11 @@ import os
 import secrets
 import time
 from typing import Optional, Dict, Tuple
-from fastapi import Request, HTTPException, status
+from fastapi import Request, HTTPException, status, Depends
+from sqlalchemy.orm import Session
 from app.config import settings
+from app.db import get_db
+from app.models import User
 
 # In-memory rate limiting dictionary: (ip, route) -> list of timestamp floats
 # Note: Recorded in ASSUMPTIONS.md as in-memory and resets on server restart/deploy.
@@ -77,3 +80,41 @@ def check_rate_limit(request: Request, route_key: str, max_requests: int = 10, w
     
     timestamps.append(now)
     _RATE_LIMIT_STORE[key] = timestamps
+
+
+def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> User:
+    """
+    Dependency: Authenticates staff user from session.
+    Redirects unauthenticated staff to /staff/login?next=... (or 403 on API).
+    """
+    user_id = request.session.get("staff_user_id")
+    if not user_id:
+        # Check if browser GET request or API request
+        next_url = request.url.path
+        if request.method == "GET" and not next_url.startswith("/api/"):
+            raise HTTPException(
+                status_code=status.HTTP_303_SEE_OTHER,
+                headers={"Location": f"/staff/login?next={next_url}"}
+            )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Authentication required")
+        
+    user = db.get(User, user_id)
+    if not user or not user.is_active:
+        request.session.clear()
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            headers={"Location": "/staff/login"}
+        )
+    return user
+
+
+def require_role(*allowed_roles: str):
+    """Dependency factory checking staff role authorization."""
+    def role_checker(user: User = Depends(get_current_staff_user)) -> User:
+        if user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access forbidden: role '{user.role}' lacks sufficient privileges."
+            )
+        return user
+    return role_checker

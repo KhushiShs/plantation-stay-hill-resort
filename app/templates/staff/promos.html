@@ -1,0 +1,99 @@
+{% extends "staff/base_staff.html" %}
+
+{% block title %}Promotions Ledger — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-3);">
+  <div>
+    <span class="label-caps" style="color: var(--color-accent);">Discount Management</span>
+    <h1 style="font-size: 1.8rem; margin: var(--space-1) 0;">Promotions & Promotional Codes</h1>
+    <p style="color: var(--color-muted); font-size: 0.92rem; margin: 0;">Configure promotional codes, percentage discounts, and validity periods.</p>
+  </div>
+</div>
+
+{% if success_msg %}
+<div class="alert-banner alert-success">{{ success_msg }}</div>
+{% endif %}
+{% if error_msg %}
+<div class="alert-banner alert-error">{{ error_msg }}</div>
+{% endif %}
+
+<!-- Create / Edit Promo Drawer -->
+<div style="background: #FDFCFA; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-5); margin-bottom: var(--space-6);">
+  <h2 style="font-size: 1.15rem; margin-top: 0; margin-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">Create / Update Promotional Code</h2>
+  
+  <form action="/staff/promos/save" method="post" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4); align-items: end;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div>
+      <label for="code" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Code (e.g. MONSOON15)</label>
+      <input type="text" id="code" name="code" required placeholder="UPPERCASE" style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; text-transform: uppercase; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="discount_percent" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Discount Percentage (%)</label>
+      <input type="text" id="discount_percent" name="discount_percent" required placeholder="e.g. 10 or 12.5" style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="valid_from" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Valid From</label>
+      <input type="date" id="valid_from" name="valid_from" value="{{ today_str }}" required style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="valid_to" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Valid Until (Inclusive)</label>
+      <input type="date" id="valid_to" name="valid_to" value="{{ next_year_str }}" required style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 8px 12px; font-size: 0.95rem;">Save Promotion Code</button>
+    </div>
+  </form>
+</div>
+
+<!-- Promo Codes Ledger Table -->
+<div style="background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow-x: auto;">
+  <table class="ledger-table">
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>Discount</th>
+        <th>Basis Points</th>
+        <th>Valid Window</th>
+        <th>Status</th>
+        <th style="text-align: right;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in promos %}
+      <tr>
+        <td><strong style="font-family: monospace; font-size: 1.05rem;">{{ p.code }}</strong></td>
+        <td><strong>{{ "%.2f"|format(p.discount_bps / 100) }}%</strong></td>
+        <td style="color: var(--color-muted);">{{ p.discount_bps }} bps</td>
+        <td>{{ p.valid_from.strftime("%d %b %Y") }} &ndash; {{ p.valid_to.strftime("%d %b %Y") }}</td>
+        <td>
+          {% if p.is_active %}
+          <span class="status-badge badge-confirmed">Active</span>
+          {% else %}
+          <span class="status-badge" style="background: #eee; color: #888;">Deactivated</span>
+          {% endif %}
+        </td>
+        <td style="text-align: right;">
+          <form action="/staff/promos/toggle-active" method="post" style="display: inline; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="code" value="{{ p.code }}">
+            <button type="submit" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.78rem;">
+              {% if p.is_active %}Deactivate{% else %}Reactivate{% endif %}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--color-muted); padding: var(--space-4);">No promotional codes created yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

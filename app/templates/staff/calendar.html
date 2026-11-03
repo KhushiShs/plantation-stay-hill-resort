@@ -1,0 +1,191 @@
+{% extends "staff/base_staff.html" %}
+
+{% block title %}Tariff & Allotment Ledger — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-4); flex-wrap: wrap; gap: var(--space-3);">
+  <div>
+    <span class="label-caps" style="color: var(--color-accent);">Inventory Control</span>
+    <h1 style="font-size: 1.8rem; margin: var(--space-1) 0;">Tariff & Allotment Ledger</h1>
+    <p style="color: var(--color-muted); font-size: 0.92rem; margin: 0;">Manage 60-day rates, website allotment caps, and blackout closures.</p>
+  </div>
+
+  <div style="display: flex; gap: var(--space-3); align-items: center;">
+    <form method="get" action="/staff/calendar" style="display: flex; gap: 8px; align-items: center; margin: 0;">
+      <label for="room_type_id" style="font-size: 0.88rem; font-weight: 500;">Room Type:</label>
+      <select id="room_type_id" name="room_type_id" onchange="this.form.submit()" style="padding: 6px 12px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+        {% for rt in room_types %}
+        <option value="{{ rt.id }}" {% if rt.id == current_room_type.id %}selected{% endif %}>{{ rt.name }} (Cap: {{ rt.total_inventory }})</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+{% if success_msg %}
+<div class="alert-banner alert-success">{{ success_msg }}</div>
+{% endif %}
+{% if error_msg %}
+<div class="alert-banner alert-error">{{ error_msg }}</div>
+{% endif %}
+
+<!-- Bulk Update Form Drawer -->
+<div style="background: #FDFCFA; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-5); margin-bottom: var(--space-6);">
+  <h2 style="font-size: 1.15rem; margin-top: 0; margin-bottom: var(--space-3); border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">Batch Rate & Allotment Update (1–180 Days)</h2>
+  
+  <form action="/staff/calendar/batch-update" method="post" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--space-4); align-items: end;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="room_type_id" value="{{ current_room_type.id }}">
+
+    <div>
+      <label for="start_date" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Start Date</label>
+      <input type="date" id="start_date" name="start_date" value="{{ default_start_date }}" required style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="end_date" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">End Date (Inclusive)</label>
+      <input type="date" id="end_date" name="end_date" value="{{ default_end_date }}" required style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="weekday_rate_rupees" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Weekday Rate (₹ Sun–Thu)</label>
+      <input type="text" id="weekday_rate_rupees" name="weekday_rate_rupees" placeholder="Leave blank to preserve" style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="weekend_rate_rupees" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Weekend Rate (₹ Fri–Sat)</label>
+      <input type="text" id="weekend_rate_rupees" name="weekend_rate_rupees" placeholder="Leave blank to preserve" style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="total_allotment" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Website Allotment (Max {{ current_room_type.total_inventory }})</label>
+      <input type="number" id="total_allotment" name="total_allotment" min="0" max="{{ current_room_type.total_inventory }}" placeholder="Leave blank to preserve" style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div>
+      <label for="blackout_action" style="display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;">Blackout Status</label>
+      <select id="blackout_action" name="blackout_action" style="width: 100%; padding: 7px; font-family: inherit; font-size: 0.9rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+        <option value="preserve">Preserve Current</option>
+        <option value="enable">Set Blackout (Block Holds)</option>
+        <option value="disable">Clear Blackout (Open Booking)</option>
+      </select>
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 8px 12px; font-size: 0.95rem;">Apply Batch Update</button>
+    </div>
+  </form>
+</div>
+
+<!-- 60-Day Allotment Ledger Table -->
+<div style="background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow-x: auto;">
+  <table class="ledger-table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Day</th>
+        <th>Base Rate (₹)</th>
+        <th>Total Allotment</th>
+        <th>Sold</th>
+        <th>Held</th>
+        <th>Remaining</th>
+        <th>Blackout</th>
+        <th style="text-align: right;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in ledger_rows %}
+      <tr style="{% if row.allotment.blackout %}background: #FFF9F8;{% elif row.remaining == 0 %}background: #FAF8F5;{% endif %}">
+        <td><strong>{{ row.date.strftime("%d %b %Y") }}</strong></td>
+        <td>{{ row.date.strftime("%a") }}</td>
+        <td>
+          <form action="/staff/calendar/single-update" method="post" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="room_type_id" value="{{ current_room_type.id }}">
+            <input type="hidden" name="target_date" value="{{ row.date.strftime('%Y-%m-%d') }}">
+            <span>₹</span>
+            <input type="text" name="rate_rupees" value="{{ row.price_rupees }}" style="width: 90px; padding: 4px 6px; font-family: inherit; font-size: 0.88rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <button type="submit" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;">Save</button>
+          </form>
+        </td>
+        <td>
+          <form action="/staff/calendar/single-update" method="post" style="display: flex; gap: 4px; align-items: center; margin: 0;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="room_type_id" value="{{ current_room_type.id }}">
+            <input type="hidden" name="target_date" value="{{ row.date.strftime('%Y-%m-%d') }}">
+            <input type="number" name="total_allotment" value="{{ row.allotment.total }}" min="0" max="{{ current_room_type.total_inventory }}" style="width: 65px; padding: 4px 6px; font-family: inherit; font-size: 0.88rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            <button type="submit" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;">Set</button>
+          </form>
+        </td>
+        <td><span class="status-badge badge-confirmed">{{ row.allotment.sold }}</span></td>
+        <td><span class="status-badge badge-held">{{ row.allotment.held }}</span></td>
+        <td>
+          <strong style="{% if row.remaining <= 3 and row.remaining > 0 %}color: var(--color-accent);{% elif row.remaining == 0 %}color: var(--color-muted);{% endif %}">
+            {{ row.remaining }}
+          </strong>
+        </td>
+        <td>
+          {% if row.allotment.blackout %}
+          <span class="status-badge badge-blackout">Blackout</span>
+          {% else %}
+          <span style="color: var(--color-muted); font-size: 0.8rem;">Active</span>
+          {% endif %}
+        </td>
+        <td style="text-align: right;">
+          <form action="/staff/calendar/toggle-blackout" method="post" style="margin: 0; display: inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="room_type_id" value="{{ current_room_type.id }}">
+            <input type="hidden" name="target_date" value="{{ row.date.strftime('%Y-%m-%d') }}">
+            <button type="submit" class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;">
+              {% if row.allotment.blackout %}Open Dates{% else %}Set Blackout{% endif %}
+            </button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- GM-Only Audit Log Ledger -->
+{% if current_user.role == 'gm' %}
+<div style="margin-top: var(--space-7); background: #FAF8F5; border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-5);">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--space-3);">
+    <div>
+      <span class="label-caps" style="color: var(--color-ink);">Security & Compliance</span>
+      <h3 style="font-size: 1.2rem; margin: 4px 0 0;">Recent Administrative Changes (GM Audit Log)</h3>
+    </div>
+    <span class="staff-badge" style="background: var(--color-ink); color: #fff;">GM Exclusive</span>
+  </div>
+
+  <table class="ledger-table" style="background: #fff;">
+    <thead>
+      <tr>
+        <th>Timestamp (UTC)</th>
+        <th>Staff Member</th>
+        <th>Role</th>
+        <th>Action</th>
+        <th>Entity ID</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in audit_logs %}
+      <tr>
+        <td style="font-size: 0.85rem; color: var(--color-muted);">{{ a.created_at.strftime("%d %b %Y, %H:%M") }}</td>
+        <td><strong>{{ a.user_name }}</strong></td>
+        <td><span class="staff-badge" style="background: #EAE3D2; color: #333;">{{ a.user_role }}</span></td>
+        <td><code>{{ a.action }}</code></td>
+        <td><code>{{ a.entity_id }}</code></td>
+        <td style="font-size: 0.85rem; max-width: 320px; word-break: break-all;">{{ a.details }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" style="text-align: center; color: var(--color-muted); padding: var(--space-4);">No administrative events logged yet.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

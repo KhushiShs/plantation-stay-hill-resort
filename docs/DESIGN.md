@@ -38,3 +38,4 @@ All contrast ratios meet or exceed WCAG 2.1 AA (minimum 4.5:1 for body copy):
    - Prominent Form C regulatory notice.
 5. **Mock Payment Screen**:
    - Plain, intentional "Test Mode" appearance distinct from the guest site to prevent user confusion during simulation.
+

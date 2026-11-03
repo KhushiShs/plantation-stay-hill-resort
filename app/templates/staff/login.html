@@ -1,0 +1,44 @@
+{% extends "staff/base_staff.html" %}
+
+{% block title %}Staff Login — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="max-width: 420px; margin: 0 auto; background: #fff; padding: var(--space-6); border: 1px solid var(--color-border); border-radius: var(--radius-sm); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+  <div style="text-align: center; margin-bottom: var(--space-5);">
+    <span class="label-caps" style="color: var(--color-accent);">Internal Portal</span>
+    <h1 style="font-size: 1.6rem; margin: var(--space-2) 0;">Staff Authentication</h1>
+    <p style="color: var(--color-muted); font-size: 0.9rem;">Sign in to access tariff calendars, booking allotments, and estate administration.</p>
+  </div>
+
+  {% if error %}
+  <div class="alert-banner alert-error" role="alert">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <form action="/staff/login{% if next_url %}?next={{ next_url }}{% endif %}" method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    
+    <div class="form-group" style="margin-bottom: var(--space-4);">
+      <label for="email" style="display: block; font-weight: 500; font-size: 0.88rem; margin-bottom: 4px;">Staff Email Address</label>
+      <input type="email" id="email" name="email" required autocomplete="username" autofocus style="width: 100%; padding: 10px; font-family: inherit; font-size: 0.95rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <div class="form-group" style="margin-bottom: var(--space-5);">
+      <label for="password" style="display: block; font-weight: 500; font-size: 0.88rem; margin-bottom: 4px;">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password" style="width: 100%; padding: 10px; font-family: inherit; font-size: 0.95rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+    </div>
+
+    <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem;">Authenticate &rarr;</button>
+  </form>
+
+  <div style="margin-top: var(--space-5); padding-top: var(--space-4); border-top: 1px solid var(--color-border); font-size: 0.82rem; color: var(--color-muted);">
+    <p style="margin: 0 0 4px;"><strong>Demo Accounts:</strong></p>
+    <ul style="margin: 0; padding-left: 18px; line-height: 1.5;">
+      <li><code>reservations@plantationstay.local</code> (Rates, Allotment, Bookings)</li>
+      <li><code>gm@plantationstay.local</code> (All privileges + Audit Logs)</li>
+      <li><code>sales@plantationstay.local</code> (Sales enquiries only)</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

@@ -58,9 +58,42 @@ This document records all baseline assumptions, invented values, parameters, and
 - **Booking References**: Unguessable cryptographically secure tokens generated via `secrets.token_urlsafe` (e.g., `BK-A9F8X2Q1`).
 - **Session Isolation**: Sessions store `guest_booking_ref`. Actions like mock-pay, mock-fail, and mock-abandon verify both CSRF tokens and signed session cookie authorization to prevent session tampering or cross-guest cancellations.
 - **Webhook HMAC Signatures**: Webhook payloads are signed with SHA256 HMAC as `payment_id:booking_id:amount:timestamp`. Stale timestamps older than 5 minutes (300 seconds) are rejected with HTTP 400. Stored payment amount is verified against database records, ignoring client-supplied body amounts.
-- **In-Memory Rate Limiting**: Helper function `check_rate_limit(request, route_key, max_requests, window_seconds)` tracks requests in an in-memory dictionary `(client_ip, route_key) -> [timestamps]`. Note: In-memory store resets on server restart/re-deployment; bypassed during test execution (`TESTING=1`).
+- **In-Memory Rate Limiting**: Helper function `check_rate_limit(request, route_key, max_requests, window_seconds)` tracks requests in an in-memory dictionary `(client_ip, route_key) -> [timestamps]`. Note: In-memory store resets on server restart/re-deployment; exposed `reset_rate_limits()` helper is called directly in test fixtures.
 
-## 8. Typography & Asset Licences
+## 8. Staff Portal, Input Caps & Audit Rules
+- **Role Hierarchy & Access Boundaries**:
+  - `reservations`: Can view & modify rates, allotments, blackout status, promo codes, booking ledger, and issue refunds on the simulated needs-refund queue.
+  - `gm`: Possesses all permissions of `reservations` plus visibility into the immutable append-only `audit_logs` ledger.
+  - `sales`: Restricted role; receives HTTP 403 Forbidden on all rate/promo/booking admin actions (used in Phase 4 for enquiries).
+- **Staff Input Parsing & Caps**:
+  - Staff rupee and percent inputs are parsed with strict `Decimal` from strings only (no floats).
+  - Maximum 2 decimal places allowed; negative values rejected.
+  - `MAX_RUPEES = Decimal("500000.00")` (Rs 5,00,000 / night per room) to prevent integer overflow or clerical errors.
+  - `MAX_PERCENT = Decimal("100.00")` (10,000 basis points).
+  - Rupee values are converted to integer paise (`int(Decimal * 100)`).
+  - Percent values are converted to basis points (`int(Decimal * 100)`).
+- **Range Updates**:
+  - Staff can update single dates or date ranges up to 180 days (`end_date >= start_date`).
+  - Executed in a single atomic transaction.
+  - Capacity Check: If a new website allotment would fall below existing `sold + held` on any night in the range, the entire transaction is rolled back and the failing dates are listed in a friendly flash error without raising a database 500 exception.
+- **Blackout Semantics**:
+  - Blackout toggling blocks subsequent holds on guest routes (`AND NOT blackout`).
+  - Existing confirmed bookings remain honored and are never cancelled; sold/held allotments are never modified by blackout changes.
+  - Staff UI warns with the count of already-confirmed bookings overlapping the blacked-out window.
+- **Booking Price Immutability**:
+  - Confirmed bookings store nightly price snapshots (`booking_nights`). Administrative rate changes never mutate past or already-booked reservations.
+- **Refund Queue**:
+  - "Mark Refunded" triggers an idempotent atomic update (`UPDATE payments SET status = 'refunded' WHERE status = 'needs_refund'`).
+  - Explicitly labeled in the UI as simulated.
+- **CSV Data Sanitization**:
+  - Booking CSV export escapes formula-leading characters (`=`, `+`, `-`, `@`) with a single-quote prefix to safeguard against spreadsheet formula injection. Restricted to `reservations` and `gm`.
+- **Search Engine Indexing & Robots**:
+  - `<meta name="robots" content="noindex, nofollow">` on all `/staff` pages.
+  - `/static/robots.txt` explicitly disallows `/staff` and `/staff/`.
+- **Responsive Layout**:
+  - 768px tablet layout supported with horizontal scroll containers on tabular ledgers, grid wrapping for form fields, and responsive typography.
+
+## 9. Typography & Asset Licences
 - **Typeface**: Single self-hosted variable font family: `Newsreader` (Google Fonts / Production Type), licensed under the SIL Open Font License (OFL 1.1). Hosted as subset WOFF2 (`newsreader-latin.woff2`, `newsreader-italic-latin.woff2`).
 - **Photography & Placeholders**:
   - `docs/photos_todo.md` is currently absent, so no third-party licence-free photographs are assumed or invented.

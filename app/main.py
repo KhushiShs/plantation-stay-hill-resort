@@ -5,6 +5,7 @@ from fastapi.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
 from app.config import settings
 from app.routes.guest import router as guest_router, templates
+from app.routes.staff import router as staff_router
 
 app = FastAPI(title=settings.app_name)
 
@@ -21,8 +22,9 @@ app.add_middleware(
 # Static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Include Guest Router
+# Include Routers
 app.include_router(guest_router)
+app.include_router(staff_router)
 
 
 # Global error handlers

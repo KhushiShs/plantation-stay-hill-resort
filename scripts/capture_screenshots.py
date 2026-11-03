@@ -64,3 +64,4 @@ with sync_playwright() as p:
 
     browser.close()
     print("All mobile screenshots captured successfully!")
+
