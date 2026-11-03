@@ -1,0 +1,164 @@
+[
+  {
+    "id": "ENQ-4410",
+    "channel": "web_form",
+    "sender_name": "Rohan Deshmukh",
+    "sender_contact": "rohan.deshmukh@example.com",
+    "raw_message": "Venue for my sister's wedding in Feb 2027, about 250 guests, 2 nights",
+    "expected_category": "wedding",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4411",
+    "channel": "whatsapp_sim",
+    "sender_name": "Priya Sharma",
+    "sender_contact": "+919876543210",
+    "raw_message": "Is a villa free 14-16 Nov for 2 adults and a child?",
+    "expected_category": "room",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4412",
+    "channel": "email_sim",
+    "sender_name": "Vikram Mehta",
+    "sender_contact": "vikram.mehta@techcorp-india.example",
+    "raw_message": "Team of 45 wants a January offsite with a conference hall",
+    "expected_category": "offsite",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4413",
+    "channel": "whatsapp_sim",
+    "sender_name": "Amit Patel",
+    "sender_contact": "+919811223344",
+    "raw_message": "Bhaiya wedding ke liye lawn aur 20 rooms chahiye Nov end mein",
+    "expected_category": "wedding",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4414",
+    "channel": "whatsapp_sim",
+    "sender_name": "Sunita Verma",
+    "sender_contact": "+919822334455",
+    "raw_message": "Family vacation ke liye 2 rooms available hai kya next weekend?",
+    "expected_category": "room",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4415",
+    "channel": "web_form",
+    "sender_name": "Karan Singhania",
+    "sender_contact": "karan.s@example.com",
+    "raw_message": "We stayed last week and the AC leaked all night. Can you book us another room with compensation?",
+    "expected_category": "complaint",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4416",
+    "channel": "email_sim",
+    "sender_name": "Ananya Joshi",
+    "sender_contact": "ananya.joshi@example.com",
+    "raw_message": "Terrible experience with staff at the estate. I want to speak with the General Manager immediately.",
+    "expected_category": "complaint",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4417",
+    "channel": "email_sim",
+    "sender_name": "Rahul Nambiar",
+    "sender_contact": "rahul.n@fintech-labs.example",
+    "raw_message": "Looking for a corporate retreat venue for 30 engineers with high speed wifi and projector",
+    "expected_category": "offsite",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4418",
+    "channel": "web_form",
+    "sender_name": "Deepak Rao",
+    "sender_contact": "deepak.rao@example.com",
+    "raw_message": "We might do a small conference or maybe just a holiday for 4 friends, not sure yet",
+    "expected_category": "unsorted",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4419",
+    "channel": "whatsapp_sim",
+    "sender_name": "Meera Iyer",
+    "sender_contact": "+919988776655",
+    "raw_message": "How much is the luxury villa per night for a couple?",
+    "expected_category": "room",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4420",
+    "channel": "web_form",
+    "sender_name": "Siddharth Malhotra",
+    "sender_contact": "siddharth.m@example.com",
+    "raw_message": "Planning a destination wedding for 400 people on your lawns. Need all rooms blocked.",
+    "expected_category": "wedding",
+    "is_tune_set": true
+  },
+  {
+    "id": "ENQ-4421",
+    "channel": "email_sim",
+    "sender_name": "Arjun Kapoor",
+    "sender_contact": "arjun.kapoor@growthops.example",
+    "raw_message": "Company offsite for 60 pax in March, total budget Rs 8 lakhs all-inclusive.",
+    "expected_category": "offsite",
+    "is_tune_set": false
+  },
+  {
+    "id": "ENQ-4422",
+    "channel": "web_form",
+    "sender_name": "Harish Hegde",
+    "sender_contact": "harish.h@example.com",
+    "raw_message": "You cancelled my booking without warning, this is unacceptable and I demand a full refund!",
+    "expected_category": "complaint",
+    "is_tune_set": false
+  },
+  {
+    "id": "ENQ-4423",
+    "channel": "whatsapp_sim",
+    "sender_name": "Divya Nair",
+    "sender_contact": "+919712345678",
+    "raw_message": "Hey is the pool open this Sunday? thinking of driving down with 3 friends for a 1 night stay",
+    "expected_category": "room",
+    "is_tune_set": false
+  },
+  {
+    "id": "ENQ-4424",
+    "channel": "email_sim",
+    "sender_name": "Gautam Bose",
+    "sender_contact": "gbose@cloudtech.example",
+    "raw_message": "Our engineering department has grown significantly over the last three quarters and we are planning our annual strategic leadership conclave. We require a dedicated conference hall with audio-visual equipment and breakout spaces for 25 executives.",
+    "expected_category": "offsite",
+    "is_tune_set": false
+  },
+  {
+    "id": "ENQ-4425",
+    "channel": "web_form",
+    "sender_name": "Tarun Saxena",
+    "sender_contact": "tarun.s@example.com",
+    "raw_message": "Rates?",
+    "expected_category": "unsorted",
+    "is_tune_set": false
+  },
+  {
+    "id": "ENQ-4426",
+    "channel": "whatsapp_sim",
+    "sender_name": "Kavita Reddy",
+    "sender_contact": "+919654321876",
+    "raw_message": "Room bahut dirty tha and bathroom mein water nahi aa raha tha, staff was extremely rude and unhelpful",
+    "expected_category": "complaint",
+    "is_tune_set": false
+  },
+  {
+    "id": "ENQ-4427",
+    "channel": "web_form",
+    "sender_name": "Naveen Chawla",
+    "sender_contact": "naveen.chawla@example.com",
+    "raw_message": "Need 1 villa from 20-22 Dec, 2 adults, 2 kids, 1 infant with cot",
+    "expected_category": "room",
+    "is_tune_set": false
+  }
+]
