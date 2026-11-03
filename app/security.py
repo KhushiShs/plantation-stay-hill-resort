@@ -51,13 +51,16 @@ def verify_hmac_signature(payload: str, signature: str, secret: Optional[str] = 
     return hmac.compare_digest(expected, signature)
 
 
+def reset_rate_limits() -> None:
+    """Clear all in-memory rate limiting counters."""
+    _RATE_LIMIT_STORE.clear()
+
+
 def check_rate_limit(request: Request, route_key: str, max_requests: int = 10, window_seconds: int = 60) -> None:
     """
     In-memory rate limiter keyed on client IP and route_key.
     Raises HTTP 429 Too Many Requests if threshold is exceeded.
     """
-    if os.getenv("TESTING") == "1":
-        return
     client_ip = request.client.host if request.client else "127.0.0.1"
     key = (client_ip, route_key)
     now = time.time()

@@ -425,3 +425,29 @@ def test_mock_pay_after_expiry_rehold_or_needs_refund(client, db_session):
 
     payment = db_session.scalar(select(Payment).where(Payment.booking_id == booking.id))
     assert payment.status == "needs_refund"
+
+
+def test_rate_limit_enforced_and_returns_429(client):
+    """Prove that exceeding the rate limit on /book/hold returns HTTP 429."""
+    csrf = get_csrf_token(client)
+    payload = {
+        "csrf_token": csrf,
+        "room_type_id": "estate-room",
+        "rate_plan_id": "room_only",
+        "check_in": "2026-12-05",
+        "check_out": "2026-12-07",
+        "guest_name": "Rapid Clicker",
+        "guest_email": "rapid@example.com",
+        "guest_phone": "9876543210",
+        "dpdp_consent": "true"
+    }
+
+    # /book/hold threshold is max_requests=10 per 60 seconds
+    responses = []
+    for _ in range(12):
+        res = client.post("/book/hold", data=payload, follow_redirects=False)
+        responses.append(res.status_code)
+
+    assert 429 in responses, f"Expected HTTP 429 in responses, got: {responses}"
+    # Specifically, after 10 requests, the 11th and 12th must be 429
+    assert responses[-1] == 429

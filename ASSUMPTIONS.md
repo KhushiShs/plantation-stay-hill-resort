@@ -63,9 +63,13 @@ This document records all baseline assumptions, invented values, parameters, and
 ## 8. Typography & Asset Licences
 - **Typeface**: Single self-hosted variable font family: `Newsreader` (Google Fonts / Production Type), licensed under the SIL Open Font License (OFL 1.1). Hosted as subset WOFF2 (`newsreader-latin.woff2`, `newsreader-italic-latin.woff2`).
 - **Photography & Placeholders**:
-  - Minimal estate aesthetic featuring warm paper backgrounds (`#F5F0E6`) and ink typography (`#2A1F1A`).
-  - WebP images generated with 3 sizes (`-sm.webp`, `-md.webp`, `-lg.webp`) using Pillow; flat muted placeholder tones with high contrast room typography.
-  - License-free placeholder imagery with `aspect-ratio: 16/9`, `fetchpriority="high"` on hero, and native `loading="lazy"` for below-the-fold content.
+  - `docs/photos_todo.md` is currently absent, so no third-party licence-free photographs are assumed or invented.
+  - Per project instructions, no photographers or external licences are fabricated.
+  - Exactly the following images are locally generated flat paper-colour placeholders (`#F5F0E6` background, `#7A6C62` subtle border, `#2A1F1A` Newsreader title text):
+    1. `/static/images/estate-hero.webp` (Hero banner on Home)
+    2. `/static/images/estate-room.webp` & `/static/images/estate-room-thumb.webp` (Estate Room gallery & thumbnail)
+    3. `/static/images/luxury-villa.webp` & `/static/images/luxury-villa-thumb.webp` (Luxury Villa gallery & thumbnail)
+  - All placeholder images maintain `aspect-ratio: 16/9`, `fetchpriority="high"` on hero, and native `loading="lazy"` for below-the-fold content.
 
 ## 9. Staff Roles & Demo Users
 - `reservations`: `reservations@plantationstay.local` / `ReservationsDemo2026!`

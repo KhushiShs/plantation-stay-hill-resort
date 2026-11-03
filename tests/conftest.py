@@ -1,11 +1,12 @@
 """Fixtures and test setup. Aborts if DB name does not end in _test."""
 import pytest
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import settings
 from app.db import Base
 from scripts.seed import seed_database
+from app.security import reset_rate_limits
 
 # Safety requirement: The test setup must abort unless the DB name ends in _test.
 db_name = settings.database_url.rsplit("/", 1)[-1].split("?")[0]
@@ -25,27 +26,46 @@ TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_eng
 
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
-    """Create all tables and seed baseline data once per test session."""
+    """Create all tables once per test session."""
     Base.metadata.drop_all(bind=test_engine)
     Base.metadata.create_all(bind=test_engine)
-    with TestSessionLocal() as session:
-        seed_database(session)
     yield
     Base.metadata.drop_all(bind=test_engine)
 
 
+@pytest.fixture(autouse=True)
+def reset_db_and_rate_limits_per_test():
+    """
+    Ensure every test is completely independent:
+    1. Truncate all tables and reseed with baseline seed data.
+    2. Reset in-memory rate limits.
+    """
+    reset_rate_limits()
+    
+    # Truncate all tables with CASCADE
+    table_names = [table.name for table in Base.metadata.sorted_tables]
+    if table_names:
+        truncate_sql = f"TRUNCATE TABLE {', '.join(table_names)} RESTART IDENTITY CASCADE;"
+        with test_engine.connect() as conn:
+            conn.execute(text(truncate_sql))
+            conn.commit()
+
+    with TestSessionLocal() as session:
+        seed_database(session)
+
+    yield
+
+    reset_rate_limits()
+
+
 @pytest.fixture
 def db_session():
-    """Yield a database session for each test, rolling back on completion."""
-    connection = test_engine.connect()
-    transaction = connection.begin()
-    session = Session(bind=connection)
-
-    yield session
-
-    session.close()
-    transaction.rollback()
-    connection.close()
+    """Yield a database session for each test."""
+    session = TestSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
 
 
 @pytest.fixture
