@@ -1017,3 +1017,57 @@ def post_dismiss_alert(
         alert.is_read = True
         db.commit()
     return RedirectResponse("/staff/enquiries", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# -------------------------------------------------------------
+# Staff Simulators: Email and WhatsApp Intake
+# -------------------------------------------------------------
+@router.get("/simulate-intake", response_class=HTMLResponse)
+def get_simulate_intake(
+    request: Request,
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Staff interface to simulate incoming email or WhatsApp enquiries."""
+    gm_unread = 0
+    if current_user.role == "gm":
+        gm_unread = db.query(Alert).filter(Alert.target_role == "gm", Alert.is_read.is_(False)).count()
+
+    success_id = request.session.pop("sim_success_id", None)
+    success_enquiry = db.get(Enquiry, success_id) if success_id else None
+
+    return templates.TemplateResponse("staff/simulators.html", {
+        "request": request,
+        "current_user": current_user,
+        "active_tab": "simulators",
+        "csrf_token": get_staff_csrf_token(request),
+        "gm_unread_alerts": gm_unread,
+        "success_enquiry": success_enquiry
+    })
+
+
+@router.post("/simulate-intake")
+def post_simulate_intake(
+    request: Request,
+    channel: str = Form(...),
+    sender_name: str = Form(...),
+    sender_contact: str = Form(...),
+    raw_message: str = Form(...),
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Processes simulated intake through the real router pipeline."""
+    verify_staff_csrf(request, csrf_token)
+
+    enquiry = process_new_enquiry(
+        db=db,
+        raw_message=raw_message.strip(),
+        sender_name=sender_name.strip(),
+        sender_contact=sender_contact.strip(),
+        channel=channel
+    )
+    db.commit()
+
+    request.session["sim_success_id"] = enquiry.id
+    return RedirectResponse("/staff/simulate-intake", status_code=status.HTTP_303_SEE_OTHER)
