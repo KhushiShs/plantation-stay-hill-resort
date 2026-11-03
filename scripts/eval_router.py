@@ -1,4 +1,9 @@
-"""Evaluation script for AI Router and Keyword Fallback Classifier."""
+"""Evaluation script for AI Router and Keyword Fallback Classifier.
+
+Reads both data/enquiries_seed.json (Tuning Set) and data/enquiries_holdout.json (Hold-out Set).
+Prints separate accuracy metrics, detailed per-case comparison, and confusion matrices.
+If ANTHROPIC_API_KEY is configured, shows real-AI vs fallback side by side.
+"""
 import os
 import sys
 import json
@@ -11,85 +16,119 @@ from app.config import settings
 from app.services.router import fallback_classify, classify_enquiry
 
 
-def evaluate():
-    seed_path = os.path.join(os.path.dirname(__file__), "..", "data", "enquiries_seed.json")
-    if not os.path.exists(seed_path):
-        print(f"Error: {seed_path} not found.")
-        return
+def load_dataset(filename: str):
+    path = os.path.join(os.path.dirname(__file__), "..", "data", filename)
+    if not os.path.exists(path):
+        return []
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-    with open(seed_path, "r", encoding="utf-8") as f:
-        cases = json.load(f)
+
+def evaluate():
+    tuning_cases = load_dataset("enquiries_seed.json")
+    holdout_cases = load_dataset("enquiries_holdout.json")
 
     api_key_present = bool(settings.anthropic_api_key.strip() and settings.anthropic_model.strip())
-    print("=" * 70)
+
+    print("=" * 80)
     print("AI ROUTER & CLASSIFIER EVALUATION REPORT")
-    print(f"Total Cases: {len(cases)}")
-    print(f"Live API Configured: {api_key_present} (Model: {settings.anthropic_model or 'None - Offline Fallback'})")
-    print("=" * 70)
+    print(f"Tuning Set Cases:  {len(tuning_cases)} (data/enquiries_seed.json)")
+    print(f"Hold-out Cases:    {len(holdout_cases)} (data/enquiries_holdout.json)")
+    print(f"Live Anthropic API Configured: {api_key_present} (Model: {settings.anthropic_model or 'None - Offline Fallback'})")
+    print("=" * 80)
 
     categories = ["room", "wedding", "offsite", "complaint", "unsorted"]
-    confusion = {exp: defaultdict(int) for exp in categories}
 
-    tuning_correct = 0
-    tuning_total = 0
-    held_out_correct = 0
-    held_out_total = 0
-
-    print(f"\n{'ID':<10} | {'Expected':<10} | {'Predicted':<10} | {'Conf':<6} | {'Split':<10} | {'Match'}")
-    print("-" * 70)
-
-    for item in cases:
-        cid = item["id"]
-        raw = item["raw_message"]
-        exp = item["expected_category"]
-        is_tune = item.get("is_tune_set", False)
+    def run_split(cases, split_name):
+        print(f"\n--- EVALUATING {split_name.upper()} ({len(cases)} cases) ---")
+        confusion_fb = {exp: defaultdict(int) for exp in categories}
+        confusion_ai = {exp: defaultdict(int) for exp in categories}
+        fb_correct = 0
+        ai_correct = 0
+        misses_fb = []
+        misses_ai = []
 
         if api_key_present:
-            res, method = classify_enquiry(raw)
+            header = f"{'ID':<10} | {'Expected':<10} | {'Fallback':<10} | {'FbConf':<6} | {'FbMatch':<7} | {'RealAI':<10} | {'AIConf':<6} | {'AIMatch'}"
+            print(header)
+            print("-" * len(header))
         else:
-            res = fallback_classify(raw)
-            method = "fallback"
+            header = f"{'ID':<10} | {'Expected':<10} | {'Fallback':<10} | {'FbConf':<6} | {'FbMatch'}"
+            print(header)
+            print("-" * len(header))
 
-        pred = "unsorted" if res.confidence < settings.ai_confidence_threshold else res.category
-        confusion[exp][pred] += 1
-        is_match = (pred == exp)
+        for item in cases:
+            cid = item["id"]
+            raw = item["raw_message"]
+            exp = item["expected_category"]
 
-        if is_tune:
-            tuning_total += 1
-            if is_match:
-                tuning_correct += 1
-            split_label = "Tuning"
+            # Fallback run (always)
+            fb_res = fallback_classify(raw)
+            fb_pred = "unsorted" if fb_res.confidence < settings.ai_confidence_threshold else fb_res.category
+            confusion_fb[exp][fb_pred] += 1
+            fb_match = (fb_pred == exp)
+            if fb_match:
+                fb_correct += 1
+            else:
+                misses_fb.append((cid, exp, fb_pred, fb_res.confidence, raw))
+
+            if api_key_present:
+                ai_res, _ = classify_enquiry(raw)
+                ai_pred = "unsorted" if ai_res.confidence < settings.ai_confidence_threshold else ai_res.category
+                confusion_ai[exp][ai_pred] += 1
+                ai_match = (ai_pred == exp)
+                if ai_match:
+                    ai_correct += 1
+                else:
+                    misses_ai.append((cid, exp, ai_pred, ai_res.confidence, raw))
+
+                print(f"{cid:<10} | {exp:<10} | {fb_pred:<10} | {fb_res.confidence:<6.2f} | {'YES' if fb_match else 'NO':<7} | {ai_pred:<10} | {ai_res.confidence:<6.2f} | {'YES' if ai_match else 'NO'}")
+            else:
+                print(f"{cid:<10} | {exp:<10} | {fb_pred:<10} | {fb_res.confidence:<6.2f} | {'YES' if fb_match else 'NO'}")
+
+        fb_acc = (fb_correct / len(cases) * 100) if cases else 0
+        print("-" * len(header))
+        print(f"Fallback Classifier Accuracy on {split_name}: {fb_correct}/{len(cases)} = {fb_acc:.1f}%")
+
+        if api_key_present:
+            ai_acc = (ai_correct / len(cases) * 100) if cases else 0
+            print(f"Live Anthropic AI Accuracy on {split_name}:   {ai_correct}/{len(cases)} = {ai_acc:.1f}%")
+
+        if misses_fb:
+            print(f"\n[Fallback Misses on {split_name}]:")
+            for cid, exp, pred, conf, raw in misses_fb:
+                print(f"  * {cid}: Expected '{exp}', got '{pred}' (conf={conf:.2f}). Message: \"{raw}\"")
         else:
-            held_out_total += 1
-            if is_match:
-                held_out_correct += 1
-            split_label = "Held-out"
+            print(f"\n[Fallback Misses on {split_name}]: None (100% accurate!)")
 
-        print(f"{cid:<10} | {exp:<10} | {pred:<10} | {res.confidence:<6.2f} | {split_label:<10} | {'YES' if is_match else 'NO'}")
+        # Confusion table for fallback
+        print(f"\n[Fallback Confusion Matrix - {split_name}] (Rows: Actual, Cols: Predicted)")
+        conf_hdr = f"{'Actual':<12} | " + " | ".join([f"{c:<9}" for c in categories])
+        print(conf_hdr)
+        print("-" * len(conf_hdr))
+        for act in categories:
+            row_str = f"{act:<12} | "
+            for pred in categories:
+                row_str += f"{confusion_fb[act][pred]:<9} | "
+            print(row_str)
 
-    print("-" * 70)
-    total_correct = tuning_correct + held_out_correct
-    total_cases = tuning_total + held_out_total
+        if api_key_present:
+            print(f"\n[Real AI Confusion Matrix - {split_name}] (Rows: Actual, Cols: Predicted)")
+            print(conf_hdr)
+            print("-" * len(conf_hdr))
+            for act in categories:
+                row_str = f"{act:<12} | "
+                for pred in categories:
+                    row_str += f"{confusion_ai[act][pred]:<9} | "
+                print(row_str)
 
-    print(f"\nTuning Set Accuracy:    {tuning_correct}/{tuning_total} = {tuning_correct/tuning_total*100:.1f}%")
-    if held_out_total > 0:
-        print(f"Held-out Set Accuracy:  {held_out_correct}/{held_out_total} = {held_out_correct/held_out_total*100:.1f}%")
-    print(f"Overall Accuracy:       {total_correct}/{total_cases} = {total_correct/total_cases*100:.1f}%\n")
+        return fb_correct, len(cases)
 
-    # Confusion matrix
-    print("=" * 70)
-    print("CONFUSION MATRIX (Rows: Actual, Columns: Predicted)")
-    print("=" * 70)
-    header = f"{'Actual':<12} | " + " | ".join([f"{c:<9}" for c in categories])
-    print(header)
-    print("-" * len(header))
-    for act in categories:
-        row_str = f"{act:<12} | "
-        for pred in categories:
-            val = confusion[act][pred]
-            row_str += f"{val:<9} | "
-        print(row_str)
-    print("=" * 70)
+    # 1. Tuning Set
+    run_split(tuning_cases, "Tuning Set (data/enquiries_seed.json)")
+
+    # 2. Hold-out Set
+    run_split(holdout_cases, "Hold-out Evaluation Set (data/enquiries_holdout.json)")
 
 
 if __name__ == "__main__":
