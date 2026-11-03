@@ -14,10 +14,110 @@ from app.services.allotment import (
 from app.security import generate_hmac_signature, verify_hmac_signature
 
 
+def test_blackout_date_rejects_hold(db_session):
+    """Atomic hold must be rejected when any night is marked as blackout."""
+    blackout_date = date(2026, 12, 28)
+    alt = db_session.scalar(
+        select(Allotment).where(Allotment.room_type_id == "estate-room", Allotment.date == blackout_date)
+    )
+    if not alt:
+        alt = Allotment(room_type_id="estate-room", date=blackout_date, total=10, sold=0, held=0, blackout=True)
+        db_session.add(alt)
+    else:
+        alt.blackout = True
+    db_session.flush()
+
+    with pytest.raises(SoldOutException, match="just sold out"):
+        create_atomic_hold(db_session, "estate-room", [blackout_date], num_rooms=1)
+
+
+def test_expire_stale_holds_releases_only_expired_and_safe_twice(db_session):
+    """
+    release_expired_holds releases ONLY expired held bookings and does not touch
+    active holds, confirmed bookings, or already expired ones. Safe to run repeatedly.
+    """
+    now = datetime.now(timezone.utc)
+    target_date = date(2026, 12, 29)
+
+    alt = db_session.scalar(
+        select(Allotment).where(Allotment.room_type_id == "estate-room", Allotment.date == target_date)
+    )
+    if not alt:
+        alt = Allotment(room_type_id="estate-room", date=target_date, total=10, sold=0, held=0)
+        db_session.add(alt)
+    else:
+        alt.held = 0
+        alt.sold = 0
+    db_session.flush()
+
+    # 1. Booking A: Expired 5 minutes ago (held=1)
+    create_atomic_hold(db_session, "estate-room", [target_date], num_rooms=1)
+    booking_expired = Booking(
+        reference="BK-STALE01",
+        room_type_id="estate-room",
+        rate_plan_id="room_only",
+        check_in=target_date,
+        check_out=target_date + timedelta(days=1),
+        num_guests=1,
+        num_rooms=1,
+        status="held",
+        hold_expires_at=now - timedelta(minutes=5),
+        guest_name="Stale Guest",
+        guest_email="stale@test.local",
+        guest_phone="9876543210",
+        room_total_paise=700000,
+        gst_paise=35000,
+        grand_total_paise=735000
+    )
+    db_session.add(booking_expired)
+
+    # 2. Booking B: Active hold, expires in 8 minutes (held=1)
+    create_atomic_hold(db_session, "estate-room", [target_date], num_rooms=1)
+    booking_active = Booking(
+        reference="BK-ACTIVE01",
+        room_type_id="estate-room",
+        rate_plan_id="room_only",
+        check_in=target_date,
+        check_out=target_date + timedelta(days=1),
+        num_guests=1,
+        num_rooms=1,
+        status="held",
+        hold_expires_at=now + timedelta(minutes=8),
+        guest_name="Active Guest",
+        guest_email="active@test.local",
+        guest_phone="9876543210",
+        room_total_paise=700000,
+        gst_paise=35000,
+        grand_total_paise=735000
+    )
+    db_session.add(booking_active)
+    db_session.flush()
+
+    db_session.refresh(alt)
+    assert alt.held == 2
+
+    # First execution: must release only booking_expired
+    released_1 = release_expired_holds(db_session)
+    assert released_1 >= 1
+
+    db_session.refresh(booking_expired)
+    db_session.refresh(booking_active)
+    db_session.refresh(alt)
+
+    assert booking_expired.status == "expired"
+    assert booking_active.status == "held"
+    assert alt.held == 1
+
+    # Second execution immediately after: safe to run twice, releases 0 additional bookings
+    released_2 = release_expired_holds(db_session)
+    assert released_2 == 0
+    db_session.refresh(alt)
+    assert alt.held == 1  # Active booking hold preserved
+
+
 def test_atomic_hold_and_release(db_session):
     """Test successful hold followed by release."""
     stay = [date(2026, 12, 1), date(2026, 12, 2)]
-    # Grab initial held count
     alt = db_session.scalar(
         select(Allotment).where(Allotment.room_type_id == "estate-room", Allotment.date == stay[0])
     )
@@ -29,7 +129,6 @@ def test_atomic_hold_and_release(db_session):
     db_session.refresh(alt)
     assert alt.held == initial_held + 1
 
-    # Create a booking record
     booking = Booking(
         reference="BK-TEST01",
         room_type_id="estate-room",
@@ -274,8 +373,9 @@ def test_confirm_after_expiry_reholds_or_refunds(db_session):
     assert res == "confirmed_after_rehold"
     assert booking.status == "confirmed"
 
-    # Case 2: Now simulate when room is completely sold out
+    # Case 2: Now simulate when room is completely sold out (no stock left)
     alt.sold = alt.total
+    alt.held = 0
     db_session.flush()
 
     booking2 = Booking(
@@ -307,7 +407,7 @@ def test_confirm_after_expiry_reholds_or_refunds(db_session):
     db_session.add(payment2)
     db_session.flush()
 
-    # Cannot re-hold because sold == total
+    # Cannot re-hold because sold == total -> must go to needs_refund
     res2 = confirm_booking_payment(
         db_session,
         payment_id="PAY-EXP-002",
