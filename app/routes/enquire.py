@@ -37,8 +37,7 @@ def get_enquire_page(request: Request):
     form_token = secrets.token_hex(16)
     request.session["enquiry_form_token"] = form_token
 
-    return templates.TemplateResponse("enquire.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "enquire.html", {
         "app_name": settings.app_name,
         "csrf_token": csrf_token,
         "form_token": form_token,
@@ -73,8 +72,7 @@ def post_enquiry(
     stored_token = request.session.get("enquiry_form_token")
     if not stored_token or stored_token != form_token:
         # Invalid or reused form token
-        return templates.TemplateResponse("enquire.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "enquire.html", {
             "app_name": settings.app_name,
             "csrf_token": get_guest_csrf_token(request),
             "form_token": secrets.token_hex(16),
@@ -88,8 +86,7 @@ def post_enquiry(
 
     # 4. DPDP consent check
     if not dpdp_consent:
-        return templates.TemplateResponse("enquire.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "enquire.html", {
             "app_name": settings.app_name,
             "csrf_token": get_guest_csrf_token(request),
             "form_token": secrets.token_hex(16),
@@ -108,8 +105,7 @@ def post_enquiry(
     # 5. Message length cap (2,000 chars)
     trimmed_message = raw_message.strip()
     if len(trimmed_message) > 2000:
-        return templates.TemplateResponse("enquire.html", {
-            "request": request,
+        return templates.TemplateResponse(request, "enquire.html", {
             "app_name": settings.app_name,
             "csrf_token": get_guest_csrf_token(request),
             "form_token": secrets.token_hex(16),
@@ -151,8 +147,7 @@ def post_enquiry(
     )
     db.commit()
 
-    return templates.TemplateResponse("enquire.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "enquire.html", {
         "app_name": settings.app_name,
         "csrf_token": get_guest_csrf_token(request),
         "form_token": secrets.token_hex(16),

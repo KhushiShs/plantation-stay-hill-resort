@@ -121,7 +121,11 @@ def staff_login_action(
     request.session["staff_name"] = user.full_name
 
     # Validate next redirect URL: must start with /staff only (prevents open redirects)
-    redirect_target = "/staff/calendar"
+    if user.role == "sales":
+        redirect_target = "/staff/enquiries"
+    else:
+        redirect_target = "/staff/calendar"
+
     if next and next.startswith("/staff") and not next.startswith("//"):
         redirect_target = next
 
@@ -849,8 +853,7 @@ def get_staff_enquiries(
         alerts = db.query(Alert).filter(Alert.target_role == "gm", Alert.is_read.is_(False)).order_by(Alert.created_at.desc()).all()
         gm_unread_alerts = len(alerts)
 
-    return templates.TemplateResponse("staff/enquiries.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "staff/enquiries.html", {
         "current_user": current_user,
         "active_tab": "enquiries",
         "active_lane": lane,
@@ -892,8 +895,7 @@ def get_enquiry_detail(
     error = request.session.pop("detail_error", None)
     success_msg = request.session.pop("detail_success", None)
 
-    return templates.TemplateResponse("staff/enquiry_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "staff/enquiry_detail.html", {
         "current_user": current_user,
         "active_tab": "enquiries",
         "csrf_token": get_staff_csrf_token(request),
@@ -1036,8 +1038,7 @@ def get_simulate_intake(
     success_id = request.session.pop("sim_success_id", None)
     success_enquiry = db.get(Enquiry, success_id) if success_id else None
 
-    return templates.TemplateResponse("staff/simulators.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "staff/simulators.html", {
         "current_user": current_user,
         "active_tab": "simulators",
         "csrf_token": get_staff_csrf_token(request),
