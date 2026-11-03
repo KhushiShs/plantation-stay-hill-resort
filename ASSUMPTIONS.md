@@ -117,21 +117,60 @@ This document records all baseline assumptions, invented values, parameters, and
 - **Evaluations & Split Testing**:
   - `data/enquiries_seed.json` is partitioned into a Tuning Set (11 cases) and a Held-out Evaluation Set (7 cases). The offline deterministic keyword fallback classifier achieves 100% accuracy across both partitions (exceeding the required 70% threshold).
 
-## 10. Typography & Asset Licences
+## 10. Photography & Asset Licences
 - **Typeface**: Single self-hosted variable font family: `Newsreader` (Google Fonts / Production Type), licensed under the SIL Open Font License (OFL 1.1). Hosted as subset WOFF2 (`newsreader-latin.woff2`, `newsreader-italic-latin.woff2`).
-- **Photography & Placeholders**:
-  - `docs/photos_todo.md` is currently absent, so no third-party licence-free photographs are assumed or invented.
-  - Per project instructions, no photographers or external licences are fabricated.
-  - Exactly the following images are locally generated flat paper-colour placeholders (`#F5F0E6` background, `#7A6C62` subtle border, `#2A1F1A` Newsreader title text):
-    1. `/static/images/estate-hero.webp` (Hero banner on Home)
-    2. `/static/images/estate-room.webp` & `/static/images/estate-room-thumb.webp` (Estate Room gallery & thumbnail)
-    3. `/static/images/luxury-villa.webp` & `/static/images/luxury-villa-thumb.webp` (Luxury Villa gallery & thumbnail)
-  - All placeholder images maintain `aspect-ratio: 16/9`, `fetchpriority="high"` on hero, and native `loading="lazy"` for below-the-fold content.
 
-## 9. Staff Roles & Demo Users
+### Photo Sources and Licences (from img_source/SOURCES.md)
+All photos are from Unsplash and are used under the Unsplash License (https://unsplash.com/license), which allows free use, including commercial use, without asking permission. Credit is given here as good practice.
+
+All five are placeholder photos. None of them shows the actual resort or Chikkamagaluru.
+
+Originals live in `img_source/`. `scripts/make_images.py` reads them and writes resized WebP files (400w, 768w, 1200w) with average-colour placeholders to `app/static/img/`.
+
+#### estate-hero.jpg
+- Photographer: David Maillard
+- URL: https://unsplash.com/photos/off-road-vehicle-on-grassy-hillside-path-Rpl8l8rpYlM
+- Licence: Unsplash License
+- Used for: home page hero
+- Note: placeholder photo, not of the actual resort
+- Average colour placeholder: `#455439`
+
+#### estate-room.jpg
+- Photographer: Tran Vinh
+- URL: https://unsplash.com/photos/spacious-hotel-room-with-a-large-bed-and-scenic-view-yTOvgPo6470
+- Licence: Unsplash License
+- Used for: Estate Room card and room page
+- Note: placeholder photo, not of the actual resort
+- Average colour placeholder: `#93897a`
+
+#### luxury-villa.jpg
+- Photographer: Sanju Pandita
+- URL: https://unsplash.com/photos/a-house-with-a-pool-in-the-middle-of-it-Nz-mHsgMwzg
+- Licence: Unsplash License
+- Used for: Luxury Villa card and room page
+- Note: placeholder photo, not of the actual resort
+- Average colour placeholder: `#706d52`
+
+#### lawn.jpg
+- Photographer: Josh Lemmon
+- URL: https://unsplash.com/photos/white-wooden-gazebo-in-park-ez6OInndB2o
+- Licence: Unsplash License
+- Used for: enquiry page (weddings and events)
+- Note: placeholder photo, not of the actual resort
+- Average colour placeholder: `#698041`
+
+#### coffee-estate.jpg
+- Photographer: Nick Harsell
+- URL: https://unsplash.com/photos/a-pile-of-coffee-beans-that-are-brown-7uGjMaMOoIA
+- Licence: Unsplash License
+- Used for: extra image (coffee detail)
+- Note: placeholder photo, not of the actual resort
+- Average colour placeholder: `#5c3825`
+
+## 11. Staff Roles & Demo Users
 - `reservations`: `reservations@plantationstay.local` / `ReservationsDemo2026!`
 - `gm`: `gm@plantationstay.local` / `GMDemo2026!`
 - `sales`: `sales@plantationstay.local` / `SalesDemo2026!`
 
-## 10. Test Safety
+## 12. Test Safety
 - All test suites abort execution immediately unless database name ends with `_test`.

@@ -1,0 +1,142 @@
+{
+  "coffee-estate": {
+    "avg_color": "#5c3825",
+    "orig_size": [
+      7952,
+      5304
+    ],
+    "aspect_ratio": 1.4992,
+    "variants": {
+      "400": {
+        "file": "/static/img/coffee-estate-400.webp",
+        "width": 400,
+        "height": 267,
+        "size_kb": 18.6
+      },
+      "768": {
+        "file": "/static/img/coffee-estate-768.webp",
+        "width": 768,
+        "height": 512,
+        "size_kb": 46.7
+      },
+      "1200": {
+        "file": "/static/img/coffee-estate-1200.webp",
+        "width": 1200,
+        "height": 800,
+        "size_kb": 89.4
+      }
+    }
+  },
+  "estate-hero": {
+    "avg_color": "#455439",
+    "orig_size": [
+      2400,
+      1600
+    ],
+    "aspect_ratio": 1.5,
+    "variants": {
+      "400": {
+        "file": "/static/img/estate-hero-400.webp",
+        "width": 400,
+        "height": 267,
+        "size_kb": 29.8
+      },
+      "768": {
+        "file": "/static/img/estate-hero-768.webp",
+        "width": 768,
+        "height": 512,
+        "size_kb": 99.1
+      },
+      "1200": {
+        "file": "/static/img/estate-hero-1200.webp",
+        "width": 1200,
+        "height": 800,
+        "size_kb": 211.0
+      }
+    }
+  },
+  "estate-room": {
+    "avg_color": "#93897a",
+    "orig_size": [
+      4000,
+      2667
+    ],
+    "aspect_ratio": 1.4998,
+    "variants": {
+      "400": {
+        "file": "/static/img/estate-room-400.webp",
+        "width": 400,
+        "height": 267,
+        "size_kb": 14.7
+      },
+      "768": {
+        "file": "/static/img/estate-room-768.webp",
+        "width": 768,
+        "height": 512,
+        "size_kb": 39.5
+      },
+      "1200": {
+        "file": "/static/img/estate-room-1200.webp",
+        "width": 1200,
+        "height": 800,
+        "size_kb": 79.5
+      }
+    }
+  },
+  "lawn": {
+    "avg_color": "#698041",
+    "orig_size": [
+      8256,
+      5504
+    ],
+    "aspect_ratio": 1.5,
+    "variants": {
+      "400": {
+        "file": "/static/img/lawn-400.webp",
+        "width": 400,
+        "height": 267,
+        "size_kb": 43.5
+      },
+      "768": {
+        "file": "/static/img/lawn-768.webp",
+        "width": 768,
+        "height": 512,
+        "size_kb": 159.8
+      },
+      "1200": {
+        "file": "/static/img/lawn-1200.webp",
+        "width": 1200,
+        "height": 800,
+        "size_kb": 394.4
+      }
+    }
+  },
+  "luxury-villa": {
+    "avg_color": "#706d52",
+    "orig_size": [
+      8256,
+      5504
+    ],
+    "aspect_ratio": 1.5,
+    "variants": {
+      "400": {
+        "file": "/static/img/luxury-villa-400.webp",
+        "width": 400,
+        "height": 267,
+        "size_kb": 26.1
+      },
+      "768": {
+        "file": "/static/img/luxury-villa-768.webp",
+        "width": 768,
+        "height": 512,
+        "size_kb": 81.8
+      },
+      "1200": {
+        "file": "/static/img/luxury-villa-1200.webp",
+        "width": 1200,
+        "height": 800,
+        "size_kb": 178.9
+      }
+    }
+  }
+}
