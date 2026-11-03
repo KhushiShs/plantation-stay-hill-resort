@@ -169,6 +169,10 @@ def seed_database(session: Session, start_date: date = None) -> None:
         elif current_d in (target_nov_14, target_nov_15):
             alt_villa.sold = 4
 
+    # 7. Seed enquiries offline from data/enquiries_seed.json
+    from app.services.enquiry_service import seed_enquiries_offline
+    seed_enquiries_offline(session)
+
     session.commit()
 
 

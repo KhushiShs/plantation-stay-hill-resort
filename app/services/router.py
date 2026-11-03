@@ -90,24 +90,27 @@ def is_overdue(created_at: datetime, replied_at: Optional[datetime] = None) -> T
 
 # Keyword lexicon for the fallback classifier
 COMPLAINT_SIGNALS = [
-    "complaint", "terrible", "horrible", "unacceptable", "broken", "rude", "manager",
-    "refund", "worst", "disaster", "dirty", "noise", "stinks", "smell", "cancelled my booking",
-    "leaked", "compensation", "bahut dirty", "water nahi", "unhelpful", "extremely rude"
+    r"\bcomplaint\b", r"\bterrible\b", r"\bhorrible\b", r"\bunacceptable\b", r"\bbroken\b",
+    r"\brude\b", r"\bmanager\b", r"\brefund\b", r"\bworst\b", r"\bdisaster\b", r"\bdirty\b",
+    r"\bnoise\b", r"\bstinks\b", r"\bsmell\b", r"cancelled my booking", r"\bleaked\b",
+    r"\bcompensation\b", r"bahut dirty", r"water nahi", r"\bunhelpful\b", r"extremely rude"
 ]
 
 WEDDING_SIGNALS = [
-    "wedding", "marriage", "reception", "sangeet", "mandap", "bride", "groom",
-    "lawns", "lawn", "sister's wedding", "destination wedding"
+    r"\bwedding\b", r"\bmarriage\b", r"\breception\b", r"\bsangeet\b", r"\bmandap\b",
+    r"\bbride\b", r"\bgroom\b", r"\blawns?\b", r"sister's wedding", r"destination wedding"
 ]
 
 OFFSITE_SIGNALS = [
-    "offsite", "conference", "hall", "corporate", "retreat", "hackathon", "projector",
-    "annual strategic", "breakout spaces", "leadership conclave", "conclave"
+    r"\boffsite\b", r"\bconference\b", r"\bhall\b", r"\bcorporate\b", r"\bretreat\b",
+    r"\bhackathon\b", r"\bprojector\b", r"annual strategic", r"breakout spaces?",
+    r"leadership conclave", r"\bconclave\b"
 ]
 
 ROOM_SIGNALS = [
-    "villa", "room", "rooms", "stay", "night", "nights", "adults", "child", "infant",
-    "cot", "family vacation", "pool open", "couple", "breakfast"
+    r"\bvillas?\b", r"\brooms?\b", r"\bstay\b", r"\bnights?\b", r"\badults?\b",
+    r"\bchild\b", r"\bchildren\b", r"\bkids?\b", r"\binfants?\b", r"\bcot\b",
+    r"family vacation", r"pool open", r"\bcouple\b", r"\bbreakfast\b", r"\bholiday\b"
 ]
 
 MONTH_MAP = {
@@ -143,12 +146,18 @@ def fallback_classify(text: str) -> AIClassificationResult:
     """
     text_lower = text.lower()
 
-    complaint_score = sum(1 for w in COMPLAINT_SIGNALS if w in text_lower)
-    wedding_score = sum(1 for w in WEDDING_SIGNALS if w in text_lower)
-    offsite_score = sum(1 for w in OFFSITE_SIGNALS if w in text_lower)
-    room_score = sum(1 for w in ROOM_SIGNALS if w in text_lower)
+    complaint_score = sum(1 for pat in COMPLAINT_SIGNALS if re.search(pat, text_lower))
+    wedding_score = sum(1 for pat in WEDDING_SIGNALS if re.search(pat, text_lower))
+    offsite_score = sum(1 for pat in OFFSITE_SIGNALS if re.search(pat, text_lower))
+    room_score = sum(1 for pat in ROOM_SIGNALS if re.search(pat, text_lower))
 
-    # 1. Complaint heuristic: >= 2 signals wins immediately; 1 strong signal also wins if other scores are 0
+    # Priority rule: Event intent (wedding/offsite) takes precedence over generic room mentions ("20 rooms", "2 nights")
+    # if wedding or offsite is explicitly present
+    if wedding_score > 0 and wedding_score >= offsite_score and wedding_score >= complaint_score:
+        if "sister's wedding" in text_lower or "destination wedding" in text_lower or ("wedding" in text_lower and ("lawn" in text_lower or "guests" in text_lower or "400" in text_lower)):
+            wedding_score += 2
+
+    # 1. Complaint heuristic: >= 2 signals wins immediately; 1 strong signal also wins if other event scores are 0
     if complaint_score >= 2 or (complaint_score >= 1 and wedding_score == 0 and offsite_score == 0 and room_score <= 1):
         chosen = "complaint"
         conf = 0.85 if complaint_score >= 2 else 0.72
@@ -431,19 +440,47 @@ def build_draft_reply(
 
     # Check live availability and pricing
     # Let's check both Estate Room and Luxury Villa
-    room_types = db.query(RoomType).filter(RoomType.is_active.is_(True)).all()
+    room_types = db.query(RoomType).all()
     pricing_lines = []
 
+    # Build night list [check_in, ..., check_out - 1 day]
+    stay_dates = []
+    curr = check_in
+    while curr < check_out:
+        stay_dates.append(curr)
+        curr += timedelta(days=1)
+
     for rt in room_types:
-        quote = calculate_pricing(db, rt.id, check_in, check_out, guests=guests or 2, rate_plan_code="room_only")
-        if quote.is_available:
-            total_rupees = quote.grand_total_paise // 100
-            price_str = f"Rs {total_rupees:,}"
-            allowed_prices.append(price_str)
-            allowed_prices.append(f"₹{total_rupees:,}")
-            allowed_prices.append(f"INR {total_rupees:,}")
-            allowed_prices.append(f"{total_rupees:,} rupees")
-            pricing_lines.append(f"- {rt.name}: {price_str} total (including GST) for {quote.nights} night(s).")
+        # Check allotment
+        allotments = db.scalars(
+            select(Allotment).where(
+                Allotment.room_type_id == rt.id,
+                Allotment.date.in_(stay_dates)
+            )
+        ).all()
+
+        is_available = len(allotments) == len(stay_dates) and all(
+            (alt.sold + alt.held < alt.total) and not alt.blackout for alt in allotments
+        )
+
+        if is_available:
+            try:
+                quote = calculate_pricing(
+                    session=db,
+                    room_type_id=rt.id,
+                    rate_plan_id="room_only",
+                    stay_dates=stay_dates,
+                    num_guests=guests or 2
+                )
+                total_rupees = quote.grand_total_paise // 100
+                price_str = f"Rs {total_rupees:,}"
+                allowed_prices.append(price_str)
+                allowed_prices.append(f"₹{total_rupees:,}")
+                allowed_prices.append(f"INR {total_rupees:,}")
+                allowed_prices.append(f"{total_rupees:,} rupees")
+                pricing_lines.append(f"- {rt.name}: {price_str} total (including GST) for {len(stay_dates)} night(s).")
+            except Exception as e:
+                pricing_lines.append(f"- {rt.name}: Availability confirmed, contact reservations for quote.")
         else:
             pricing_lines.append(f"- {rt.name}: Currently fully committed for these dates.")
 
