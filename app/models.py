@@ -1,8 +1,9 @@
 """Database models for Plantation Stay."""
 from datetime import datetime, date
+from decimal import Decimal
 from typing import Optional, List
 from sqlalchemy import (
-    String, Integer, BIGINT, Boolean, Date, DateTime, Text,
+    String, Integer, BIGINT, Boolean, Date, DateTime, Text, Numeric,
     ForeignKey, UniqueConstraint, CheckConstraint, Index
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -224,38 +225,78 @@ class AuditLog(Base):
 class Enquiry(Base):
     __tablename__ = "enquiries"
 
-    id: Mapped[str] = mapped_column(String(32), primary_key=True)
-    source: Mapped[str] = mapped_column(String(32), default="web_form", nullable=False)
-    guest_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    guest_email: Mapped[str] = mapped_column(String(255), nullable=False)
-    guest_phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    id: Mapped[str] = mapped_column(String(16), primary_key=True)  # ENQ-xxxx
+    channel: Mapped[str] = mapped_column(String(20), nullable=False)  # web_form, email_sim, whatsapp_sim
+    sender_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    sender_contact: Mapped[str] = mapped_column(String(120), nullable=False)  # fake email or phone
     raw_message: Mapped[str] = mapped_column(Text, nullable=False)
-    category: Mapped[str] = mapped_column(String(32), default="unsorted", nullable=False)
-    confidence: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    classified_by_fallback: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    owner_role: Mapped[str] = mapped_column(String(32), default="reservations", nullable=False)
-    status: Mapped[str] = mapped_column(String(32), default="new", nullable=False)
+    category: Mapped[str] = mapped_column(String(20), nullable=False)  # room, wedding, offsite, complaint, unsorted
+    confidence: Mapped[Decimal] = mapped_column(Numeric(4, 3), nullable=False)  # 0.000 to 1.000
+    extracted_check_in: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    extracted_check_out: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    extracted_guests: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    extracted_budget: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    summary: Mapped[str] = mapped_column(Text, nullable=False)
+    owner_role: Mapped[str] = mapped_column(String(20), nullable=False)  # reservations, sales, gm
+    status: Mapped[str] = mapped_column(String(20), default="new", nullable=False)  # new, drafted, sent, closed
+    classified_by: Mapped[str] = mapped_column(String(10), nullable=False)  # ai, fallback
     draft_reply: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    code_inserted_prices: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON list of allowed price strings
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    first_replied_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    events: Mapped[List["EnquiryEvent"]] = relationship(back_populates="enquiry", cascade="all, delete-orphan", order_by="EnquiryEvent.created_at.asc()")
+    alerts: Mapped[List["Alert"]] = relationship(back_populates="enquiry", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        CheckConstraint("channel IN ('web_form', 'email_sim', 'whatsapp_sim')", name="chk_enquiry_channel"),
+        CheckConstraint("category IN ('room', 'wedding', 'offsite', 'complaint', 'unsorted')", name="chk_enquiry_category"),
+        CheckConstraint("owner_role IN ('reservations', 'sales', 'gm')", name="chk_enquiry_owner_role"),
+        CheckConstraint("status IN ('new', 'drafted', 'sent', 'closed')", name="chk_enquiry_status"),
+        CheckConstraint("classified_by IN ('ai', 'fallback')", name="chk_enquiry_classified_by"),
+        Index("ix_enquiries_status_owner", "status", "owner_role"),
+        Index("ix_enquiries_category", "category"),
+        Index("ix_enquiries_created_at", "created_at"),
+    )
 
 
 class EnquiryEvent(Base):
     __tablename__ = "enquiry_events"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    enquiry_id: Mapped[str] = mapped_column(String(32), ForeignKey("enquiries.id", ondelete="CASCADE"), nullable=False)
-    event_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    details: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    enquiry_id: Mapped[str] = mapped_column(String(16), ForeignKey("enquiries.id", ondelete="CASCADE"), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(30), nullable=False)  # classified, rerouted, draft_saved, reply_sent, closed
+    actor_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    actor_role: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    from_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    to_value: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    enquiry: Mapped["Enquiry"] = relationship(back_populates="events")
+    actor: Mapped[Optional["User"]] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("event_type IN ('classified', 'rerouted', 'draft_saved', 'reply_sent', 'closed')", name="chk_enquiry_event_type"),
+        Index("ix_enquiry_events_enquiry_created", "enquiry_id", "created_at"),
+    )
 
 
 class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    target_role: Mapped[str] = mapped_column(String(32), default="gm", nullable=False)
-    enquiry_id: Mapped[Optional[str]] = mapped_column(String(32), ForeignKey("enquiries.id", ondelete="SET NULL"), nullable=True)
-    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    enquiry_id: Mapped[Optional[str]] = mapped_column(String(16), ForeignKey("enquiries.id", ondelete="CASCADE"), nullable=True)
+    target_role: Mapped[str] = mapped_column(String(20), default="gm", nullable=False)
+    alert_type: Mapped[str] = mapped_column(String(30), nullable=False)  # complaint_received, response_overdue
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    enquiry: Mapped[Optional["Enquiry"]] = relationship(back_populates="alerts")
+
+    __table_args__ = (
+        CheckConstraint("target_role IN ('gm', 'reservations', 'sales')", name="chk_alert_target_role"),
+        CheckConstraint("alert_type IN ('complaint_received', 'response_overdue')", name="chk_alert_type"),
+        Index("ix_alerts_target_is_read", "target_role", "is_read", "created_at"),
+    )
