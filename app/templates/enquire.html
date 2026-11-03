@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Enquire — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="estate-card" style="max-width: 640px; margin: 40px auto; padding: 32px 24px;">
+  <p class="caption" style="text-align: center; margin-bottom: 8px;">Direct Enquiries & Events</p>
+  <h1 style="font-size: 26px; text-align: center; margin-bottom: 24px;">Send an Enquiry</h1>
+
+  {% if success %}
+  <div style="background-color: var(--paper-light); border: 1px solid var(--accent); padding: 20px; margin-bottom: 24px; text-align: center;">
+    <h2 style="font-size: 20px; color: var(--accent); margin-bottom: 8px;">Enquiry Received</h2>
+    <p style="font-size: 15px; margin-bottom: 12px;">
+      Thank you, <strong>{{ enquiry.sender_name }}</strong>. Your enquiry reference is <strong>{{ enquiry.id }}</strong>.
+    </p>
+    <p style="font-size: 14px; color: var(--ink-muted); margin-bottom: 16px;">
+      Our {{ enquiry.owner_role }} team has received your enquiry and will respond shortly.
+    </p>
+    <a href="/enquire" class="btn btn-secondary" style="font-size: 13px;">Send Another Enquiry</a>
+  </div>
+  {% else %}
+
+  {% if error %}
+  <div style="background-color: #FDF2F0; border: 1px solid var(--accent); color: var(--accent); padding: 12px 16px; margin-bottom: 20px; font-size: 14px;">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <form method="POST" action="/enquire" id="enquiry-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="form_token" value="{{ form_token }}">
+
+    <div style="margin-bottom: 16px;">
+      <label for="sender_name" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Your Name *</label>
+      <input type="text" id="sender_name" name="sender_name" required maxlength="120" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); background: var(--paper);" value="{{ form_data.sender_name if form_data else '' }}">
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label for="sender_contact" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Email or Phone Number *</label>
+      <input type="text" id="sender_contact" name="sender_contact" required maxlength="120" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); background: var(--paper);" value="{{ form_data.sender_contact if form_data else '' }}">
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+      <div>
+        <label for="preferred_check_in" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Check-in (Optional)</label>
+        <input type="date" id="preferred_check_in" name="preferred_check_in" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); background: var(--paper);" value="{{ form_data.preferred_check_in if form_data else '' }}">
+      </div>
+      <div>
+        <label for="preferred_check_out" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Check-out (Optional)</label>
+        <input type="date" id="preferred_check_out" name="preferred_check_out" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); background: var(--paper);" value="{{ form_data.preferred_check_out if form_data else '' }}">
+      </div>
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label for="preferred_guests" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Number of Guests / Attendees (Optional)</label>
+      <input type="number" id="preferred_guests" name="preferred_guests" min="1" max="1000" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); background: var(--paper);" value="{{ form_data.preferred_guests if form_data else '' }}">
+    </div>
+
+    <div style="margin-bottom: 16px;">
+      <label for="raw_message" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Message / Enquiry Details * (Max 2,000 characters)</label>
+      <textarea id="raw_message" name="raw_message" required maxlength="2000" rows="5" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); background: var(--paper); resize: vertical;">{{ form_data.raw_message if form_data else '' }}</textarea>
+    </div>
+
+    <div style="margin-bottom: 24px; padding: 12px; background: var(--paper-light); border: 1px solid var(--border-color);">
+      <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 12px; cursor: pointer;">
+        <input type="checkbox" name="dpdp_consent" value="yes" required style="margin-top: 3px;">
+        <span>I consent to {{ app_name }} processing the contact details provided solely for responding to this enquiry, in accordance with the Digital Personal Data Protection (DPDP) Act 2023.</span>
+      </label>
+    </div>
+
+    <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px;">Submit Enquiry</button>
+  </form>
+  {% endif %}
+</div>
+
+<script>
+  // Disable submit button on submit to prevent double posts
+  const form = document.getElementById('enquiry-form');
+  if (form) {
+    form.addEventListener('submit', function() {
+      const btn = document.getElementById('submit-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = 'Submitting...';
+      }
+    });
+  }
+</script>
+{% endblock %}
