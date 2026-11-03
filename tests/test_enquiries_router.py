@@ -471,3 +471,152 @@ def test_public_form_message_length_cap():
     resp = client.post("/enquire", data=post_data)
     assert resp.status_code == 400
     assert "exceeds maximum allowed length" in resp.text
+
+
+# -------------------------------------------------------------
+# 11. Send Idempotency & GM Median First Reply SLA Calculation
+# -------------------------------------------------------------
+def test_send_enquiry_reply_idempotency():
+    """Calling send_enquiry_reply repeatedly never overwrites original first_replied_at."""
+    with SessionLocal() as db:
+        # Create user & enquiry
+        staff_user = db.query(User).filter(User.role == "reservations").first()
+        if not staff_user:
+            staff_user = User(
+                email="res.test@plantationstay.local",
+                full_name="Res Staff",
+                role="reservations",
+                password_hash=hash_password("DummyPass123!")
+            )
+            db.add(staff_user)
+            db.flush()
+
+        enquiry = process_new_enquiry(
+            db=db,
+            raw_message="Need a room next month.",
+            sender_name="Idempotency Guest",
+            sender_contact="guest@example.com",
+            channel="web_form",
+            force_fallback=True
+        )
+        assert enquiry.status in ("new", "drafted")
+        assert enquiry.first_replied_at is None
+
+        # First simulated send
+        first_send_time = datetime(2026, 11, 9, 10, 15, tzinfo=timezone.utc)
+        with patch("app.services.enquiry_service.datetime") as mock_dt:
+            mock_dt.now.return_value = first_send_time
+            mock_dt.side_effect = lambda *args, **kw: datetime(*args, **kw)
+            success, err = send_enquiry_reply(db, enquiry, enquiry.draft_reply, staff_user)
+            assert success
+            assert err is None
+            assert enquiry.status == "sent"
+            assert enquiry.first_replied_at == first_send_time
+
+        orig_replied_at = enquiry.first_replied_at
+
+        # Second send attempt 2 hours later
+        later_send_time = datetime(2026, 11, 9, 12, 15, tzinfo=timezone.utc)
+        with patch("app.services.enquiry_service.datetime") as mock_dt:
+            mock_dt.now.return_value = later_send_time
+            mock_dt.side_effect = lambda *args, **kw: datetime(*args, **kw)
+            success2, err2 = send_enquiry_reply(db, enquiry, enquiry.draft_reply, staff_user)
+            assert success2
+            # Crucial: first_replied_at remains untouched at the original timestamp
+            assert enquiry.first_replied_at == orig_replied_at
+
+
+def test_gm_median_reply_calculation():
+    """GM inbox computes the correct median working-minutes first reply time over the last 7 days."""
+    client = TestClient(app)
+    with SessionLocal() as db:
+        gm_user = db.query(User).filter(User.role == "gm").first()
+        if not gm_user:
+            gm_user = User(
+                email="gm.test@plantationstay.local",
+                full_name="GM Test",
+                role="gm",
+                password_hash=hash_password("GMPass123!")
+            )
+            db.add(gm_user)
+            db.flush()
+
+        # Seed 3 replied enquiries within the last 7 days with known response gaps
+        # Working hours: 9:00 - 18:00 IST Mon-Sat (Sunday closed).
+        # We pick 1 day ago (Monday) so it's a working day.
+        # 10:00 IST = 04:30 UTC
+        # Enq 1: created Mon 10:00 IST, replied Mon 10:10 IST -> 10 minutes
+        # Enq 2: created Mon 10:00 IST, replied Mon 10:20 IST -> 20 minutes
+        # Enq 3: created Mon 10:00 IST, replied Mon 10:45 IST -> 45 minutes
+        # Median of [10, 20, 45] is 20 minutes!
+        base_utc = datetime.now(timezone.utc) - timedelta(days=1)
+        base_ist = base_utc.astimezone(IST).replace(hour=10, minute=0, second=0, microsecond=0)
+        # Ensure it falls on a working day (Mon-Sat, weekday 0-5)
+        while base_ist.weekday() == 6:  # If Sunday, go back another day
+            base_ist = base_ist - timedelta(days=1)
+        created_dt = base_ist.astimezone(timezone.utc)
+
+        e1 = Enquiry(
+            id="ENQ-9001",
+            channel="web_form",
+            sender_name="Guest 1",
+            sender_contact="g1@example.com",
+            raw_message="Enquiry 1",
+            summary="Summary 1",
+            category="room",
+            confidence=0.8,
+            owner_role="reservations",
+            status="sent",
+            classified_by="fallback",
+            created_at=created_dt,
+            first_replied_at=created_dt + timedelta(minutes=10)
+        )
+        e2 = Enquiry(
+            id="ENQ-9002",
+            channel="web_form",
+            sender_name="Guest 2",
+            sender_contact="g2@example.com",
+            raw_message="Enquiry 2",
+            summary="Summary 2",
+            category="wedding",
+            confidence=0.8,
+            owner_role="sales",
+            status="sent",
+            classified_by="fallback",
+            created_at=created_dt,
+            first_replied_at=created_dt + timedelta(minutes=20)
+        )
+        e3 = Enquiry(
+            id="ENQ-9003",
+            channel="web_form",
+            sender_name="Guest 3",
+            sender_contact="g3@example.com",
+            raw_message="Enquiry 3",
+            summary="Summary 3",
+            category="offsite",
+            confidence=0.8,
+            owner_role="sales",
+            status="sent",
+            classified_by="fallback",
+            created_at=created_dt,
+            first_replied_at=created_dt + timedelta(minutes=45)
+        )
+        db.add_all([e1, e2, e3])
+        db.commit()
+
+    # Login as GM
+    import re
+    login_get = client.get("/staff/login")
+    csrf_token_login = re.search(r'name="csrf_token"\s+value="([^"]+)"', login_get.text).group(1)
+    login_resp = client.post(
+        "/staff/login",
+        data={"email": "gm@plantationstay.local", "password": "GMDemo2026!", "csrf_token": csrf_token_login},
+        follow_redirects=False
+    )
+    assert login_resp.status_code == 303
+
+    # View enquiries inbox as GM
+    inbox_resp = client.get("/staff/enquiries")
+    assert inbox_resp.status_code == 200
+    # Median of 10, 20, 45 is 20 min
+    assert "20 min" in inbox_resp.text
