@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Reservation Confirmation — {{ booking.reference }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: var(--space-6); padding-bottom: var(--space-8);">
+  <div class="no-print" style="margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: center;">
+    <a href="/">&larr; Return to Home</a>
+    <button onclick="window.print();" class="btn btn-secondary">Print Confirmation Pass</button>
+  </div>
+
+  <!-- Pass Style Confirmation Card with Perforated Tear-Line -->
+  <div class="tear-pass">
+    <div class="pass-header">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <span class="label-caps">OFFICIAL RESERVATION PASS</span>
+          <h1 style="font-size: 1.8rem; margin-top: 4px;">{{ app_name }}</h1>
+          <p class="caption-line">Chikkamagaluru, Karnataka</p>
+        </div>
+        <div style="text-align: right;">
+          <span class="label-caps">STATUS</span><br>
+          <strong style="color: var(--color-accent); text-transform: uppercase;">Confirmed</strong>
+        </div>
+      </div>
+
+      <div style="margin-top: var(--space-4);">
+        <span class="label-caps">BOOKING REFERENCE</span>
+        <div class="ref-code">{{ booking.reference }}</div>
+        <p class="caption-line">Present this reference or reservation pass upon arrival.</p>
+      </div>
+    </div>
+
+    <div class="pass-body">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5);">
+        <div>
+          <span class="label-caps">PRIMARY GUEST</span>
+          <p style="font-size: 1.1rem; font-weight: 500;">{{ booking.guest_name }}</p>
+          <p class="caption-line">{{ booking.guest_email }}<br>{{ booking.guest_phone }}</p>
+        </div>
+        <div>
+          <span class="label-caps">ACCOMMODATION</span>
+          <p style="font-size: 1.1rem; font-weight: 500;">{{ room.name }}</p>
+          <p class="caption-line">{{ rate_plan.name }} &bull; {{ booking.num_guests }} Adults</p>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-5);">
+        <div>
+          <span class="label-caps">CHECK-IN</span>
+          <p style="font-size: 1.1rem; font-weight: 500;">{{ booking.check_in | format_date_str }}</p>
+          <p class="caption-line">From 2:00 PM</p>
+        </div>
+        <div>
+          <span class="label-caps">CHECK-OUT</span>
+          <p style="font-size: 1.1rem; font-weight: 500;">{{ booking.check_out | format_date_str }}</p>
+          <p class="caption-line">Until 11:00 AM</p>
+        </div>
+      </div>
+
+      <!-- Formal Form C Compliance Notice -->
+      <div style="background-color: var(--color-paper); border: 1px solid var(--color-border); padding: var(--space-4); margin-bottom: var(--space-5);">
+        <span class="label-caps" style="color: var(--color-ink); font-weight: 700;">REGULATORY NOTICE &bull; FORM C COMPLIANCE</span>
+        <p style="font-size: 0.9rem; margin-top: var(--space-1); line-height: 1.5; color: var(--color-muted);">
+          In compliance with government regulations, passport details (for foreign nationals) and government-issued photo identity cards (Aadhaar, Voter ID, Driving Licence, or Passport) are collected at the resort check-in desk via physical Form C registration. No passport details are requested or stored online.
+        </p>
+      </div>
+
+      <!-- Itemized Bill -->
+      <span class="label-caps">PAYMENT SUMMARY</span>
+      <div class="printed-bill" style="margin-top: var(--space-2);">
+        <div class="bill-line">
+          <span>Accommodation Total</span>
+          <span class="dot-leader"></span>
+          <span class="bill-val">{{ booking.room_total_paise | format_paise }}</span>
+        </div>
+        {% if booking.discount_paise > 0 %}
+        <div class="bill-line" style="color: var(--color-accent);">
+          <span>Promotional Discount</span>
+          <span class="dot-leader"></span>
+          <span class="bill-val">&minus;{{ booking.discount_paise | format_paise }}</span>
+        </div>
+        {% endif %}
+        <div class="bill-line">
+          <span>Goods & Services Tax (GST)</span>
+          <span class="dot-leader"></span>
+          <span class="bill-val">{{ booking.gst_paise | format_paise }}</span>
+        </div>
+        <div class="bill-line bill-total">
+          <span>Total Paid</span>
+          <span class="dot-leader"></span>
+          <span class="bill-val">{{ booking.grand_total_paise | format_paise }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

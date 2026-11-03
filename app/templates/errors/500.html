@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Estate Notice — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 580px; padding: var(--space-8) var(--space-4); text-align: center;">
+  <span class="label-caps" style="color: var(--color-accent);">SERVER NOTICE</span>
+  <h1 style="font-size: 2.2rem; margin: var(--space-2) 0 var(--space-3);">An Unexpected Error Occurred</h1>
+  
+  <p style="color: var(--color-muted); line-height: 1.6; margin-bottom: var(--space-5);">
+    Our servers experienced a temporary issue processing your request. Please return to the homepage or try again in a few moments.
+  </p>
+
+  <a href="/" class="btn btn-primary">Return to Estate Home</a>
+</div>
+{% endblock %}
+

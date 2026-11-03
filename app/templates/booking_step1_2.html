@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Guest Details & Reservation — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container has-mobile-bar" style="padding-bottom: var(--space-8);">
+  <!-- Stepper -->
+  <div class="stepper">
+    <span class="step-item">1. Stay</span>
+    <span class="step-sep">&mdash;</span>
+    <span class="step-item active">2. Details</span>
+    <span class="step-sep">&mdash;</span>
+    <span class="step-item">3. Pay</span>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-7);" class="tariff-row">
+    <!-- Left Column: Guest Details Form -->
+    <div>
+      <h1 style="font-size: 1.8rem; margin-bottom: var(--space-4);">Guest Information</h1>
+      <p class="caption-line" style="margin-bottom: var(--space-5);">
+        Please provide primary guest contact details for reservation confirmations.
+      </p>
+
+      {% if error %}
+      <div style="background-color: var(--color-paper-dark); border-left: 3px solid var(--color-accent); padding: var(--space-3); margin-bottom: var(--space-4); color: var(--color-accent); font-weight: 600;">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form id="hold-form" action="/book/hold" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="room_type_id" value="{{ room.id }}">
+        <input type="hidden" name="rate_plan_id" value="{{ rate_plan.id }}">
+        <input type="hidden" name="check_in" value="{{ check_in }}">
+        <input type="hidden" name="check_out" value="{{ check_out }}">
+        <input type="hidden" name="num_guests" value="{{ num_guests }}">
+        <input type="hidden" name="num_rooms" value="{{ num_rooms }}">
+        <input type="hidden" name="promo_code" value="{{ promo_code }}">
+
+        <div class="form-group">
+          <label for="guest_name" class="form-label">Full Name (as per Photo ID) *</label>
+          <input type="text" id="guest_name" name="guest_name" class="form-input" required value="{{ form_data.guest_name if form_data else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label for="guest_email" class="form-label">Email Address (for booking confirmation) *</label>
+          <input type="email" id="guest_email" name="guest_email" class="form-input" required value="{{ form_data.guest_email if form_data else '' }}">
+        </div>
+
+        <div class="form-group">
+          <label for="guest_phone" class="form-label">Phone Number *</label>
+          <input type="tel" id="guest_phone" name="guest_phone" class="form-input" placeholder="+91 98765 43210" required value="{{ form_data.guest_phone if form_data else '' }}">
+        </div>
+
+        <div class="checkbox-group" style="margin-top: var(--space-4);">
+          <input type="checkbox" id="dpdp_consent" name="dpdp_consent" value="true" class="checkbox-input" required>
+          <label for="dpdp_consent" style="font-size: 0.9rem; line-height: 1.4; color: var(--color-ink);">
+            <strong>DPDP Act 2023 Consent:</strong> I consent to {{ app_name }} collecting and processing my contact details solely for reservation management, check-in, and communications regarding this stay.
+          </label>
+        </div>
+
+        <div style="margin-top: var(--space-6); display: block;" class="desktop-submit">
+          <button type="submit" class="btn btn-primary" style="width: 100%; min-height: 48px; font-size: 1.05rem;">
+            Continue to Payment &rarr;
+          </button>
+          <p class="caption-line" style="text-align: center; margin-top: var(--space-2);">
+            Clicking will create a 10-minute hold on your room while you complete payment.
+          </p>
+        </div>
+      </form>
+    </div>
+
+    <!-- Right Column: Printed Bill Breakdown -->
+    <div>
+      <div class="tariff-card">
+        <span class="label-caps">SUMMARY OF STAY</span>
+        <h2 style="font-size: 1.4rem;">{{ room.name }}</h2>
+        <p class="caption-line">Plan: {{ rate_plan.name }}</p>
+
+        <div class="tariff-meta">
+          <div>
+            <strong>Check-in:</strong> {{ check_in | format_date_str }}<br>
+            <strong>Check-out:</strong> {{ check_out | format_date_str }}
+          </div>
+          <div>
+            <strong>Stay:</strong> {{ breakdown.nights | length }} Nights<br>
+            <strong>Guests:</strong> {{ num_guests }} Adults
+          </div>
+        </div>
+
+        <div class="printed-bill" style="border: none; padding: 0; background: transparent;">
+          {% for n in breakdown.nights %}
+          <div class="bill-line">
+            <span>{{ n.date | format_date_short }} (Base rate)</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">{{ n.base_rate_paise | format_paise }}</span>
+          </div>
+          {% if n.breakfast_addon_paise > 0 %}
+          <div class="bill-line" style="font-size: 0.85rem; color: var(--color-muted);">
+            <span>&nbsp;&nbsp;+ Gourmet Breakfast add-on</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">{{ n.breakfast_addon_paise | format_paise }}</span>
+          </div>
+          {% endif %}
+          {% if n.discount_paise > 0 %}
+          <div class="bill-line" style="font-size: 0.85rem; color: var(--color-accent);">
+            <span>&nbsp;&nbsp;&minus; Promo discount</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">&minus;{{ n.discount_paise | format_paise }}</span>
+          </div>
+          {% endif %}
+          {% endfor %}
+
+          {% for gst in breakdown.gst_summaries %}
+          <div class="bill-line">
+            <span>{{ gst.label }}</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">{{ gst.gst_paise | format_paise }}</span>
+          </div>
+          {% endfor %}
+
+          <div class="bill-line bill-total">
+            <span>Grand Total</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">{{ breakdown.grand_total_paise | format_paise }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile Sticky Bottom Bar -->
+<div class="mobile-sticky-bar">
+  <div>
+    <span class="label-caps">TOTAL</span><br>
+    <strong class="bill-val" style="font-size: 1.2rem; color: var(--color-accent);">{{ breakdown.grand_total_paise | format_paise }}</strong>
+  </div>
+  <div>
+    <button type="button" onclick="document.getElementById('hold-form').requestSubmit();" class="btn btn-primary">
+      Continue &rarr;
+    </button>
+  </div>
+</div>
+{% endblock %}
+

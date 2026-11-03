@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Mock Payment Gateway — Test Mode — {{ app_name }}{% endblock %}
+
+{% block content %}
+<!-- Thin 2px Hold Timer across top of viewport -->
+<div id="hold-progress" class="hold-timer-line"></div>
+
+<div class="container" style="max-width: 600px; padding: var(--space-6) var(--space-4) var(--space-8);">
+  <!-- Separate, plain test mode styling -->
+  <div style="background-color: #FFFFFF; border: 1px solid var(--color-ink); padding: var(--space-6); border-radius: var(--radius-sm);">
+    
+    <div style="border-bottom: 2px solid var(--color-ink); padding-bottom: var(--space-3); margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: baseline;">
+      <div>
+        <span class="label-caps" style="color: var(--color-accent); font-weight: 700;">PAYMENT GATEWAY SIMULATOR</span>
+        <h1 style="font-size: 1.5rem; margin-top: 4px;">Test Mode &mdash; No Money Charged</h1>
+      </div>
+      <div style="text-align: right;">
+        <span class="label-caps">HOLD TIME LEFT</span><br>
+        <strong id="timer-display" class="tabular" style="font-size: 1.1rem; color: var(--color-accent);">{{ minutes_left }}m {{ seconds_left }}s</strong>
+      </div>
+    </div>
+
+    <p style="color: var(--color-muted); font-size: 0.95rem; margin-bottom: var(--space-4);">
+      This is a development simulator for the payment webhook callback. Select a scenario below to test the atomic booking transition:
+    </p>
+
+    <div class="printed-bill" style="margin-bottom: var(--space-5);">
+      <div class="bill-line">
+        <span>Booking Reference</span>
+        <span class="dot-leader"></span>
+        <span class="bill-val">{{ booking.reference }}</span>
+      </div>
+      <div class="bill-line">
+        <span>Guest Name</span>
+        <span class="dot-leader"></span>
+        <span class="bill-val">{{ booking.guest_name }}</span>
+      </div>
+      <div class="bill-line">
+        <span>Accommodation</span>
+        <span class="dot-leader"></span>
+        <span class="bill-val">{{ booking.room_type_id }}</span>
+      </div>
+      <div class="bill-line bill-total">
+        <span>Amount Due</span>
+        <span class="dot-leader"></span>
+        <span class="bill-val">{{ booking.grand_total_paise | format_paise }}</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+      <!-- Scenario 1: Success -->
+      <form action="/book/{{ booking.reference }}/mock-pay" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-primary" style="width: 100%; min-height: 48px; font-weight: 600;">
+          Simulate Successful Payment &rarr;
+        </button>
+      </form>
+
+      <!-- Scenario 2: Failure -->
+      <form action="/book/{{ booking.reference }}/mock-fail" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-secondary" style="width: 100%;">
+          Simulate Payment Failure (Releases Hold)
+        </button>
+      </form>
+
+      <!-- Scenario 3: Abandon -->
+      <form action="/book/{{ booking.reference }}/mock-abandon" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-secondary" style="width: 100%; border-style: dashed;">
+          Simulate Abandon / Cancel
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Dynamic countdown timer based on expiry seconds
+  let totalSeconds = {{ remaining_seconds }};
+  const initialSeconds = {{ hold_minutes * 60 }};
+  const timerDisplay = document.getElementById('timer-display');
+  const progressBar = document.getElementById('hold-progress');
+
+  const interval = setInterval(() => {
+    if (totalSeconds <= 0) {
+      clearInterval(interval);
+      timerDisplay.innerText = "Expired";
+      progressBar.style.width = "0%";
+      window.location.reload();
+      return;
+    }
+    totalSeconds--;
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    timerDisplay.innerText = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    const pct = Math.max(0, (totalSeconds / initialSeconds) * 100);
+    progressBar.style.width = pct + "%";
+  }, 1000);
+</script>
+{% endblock %}
+

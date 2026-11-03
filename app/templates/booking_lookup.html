@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Find Reservation — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 540px; padding: var(--space-7) var(--space-4) var(--space-8);">
+  <span class="label-caps">GUEST SERVICE</span>
+  <h1 style="font-size: 1.8rem; margin: var(--space-2) 0 var(--space-3);">Retrieve Your Reservation</h1>
+  <p class="caption-line" style="margin-bottom: var(--space-5);">
+    Enter your booking reference code and the email address used during reservation.
+  </p>
+
+  {% if error %}
+  <div style="background-color: var(--color-paper-dark); border-left: 3px solid var(--color-accent); padding: var(--space-3); margin-bottom: var(--space-4); color: var(--color-accent); font-weight: 600;">
+    {{ error }}
+  </div>
+  {% endif %}
+
+  <form action="/booking-lookup" method="POST" class="tariff-card">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <div class="form-group">
+      <label for="reference" class="form-label">Booking Reference (e.g. BK-XXXXXXXX)</label>
+      <input type="text" id="reference" name="reference" class="form-input" placeholder="BK-XXXXXXXX" required value="{{ reference or '' }}">
+    </div>
+
+    <div class="form-group">
+      <label for="email" class="form-label">Guest Email Address</label>
+      <input type="email" id="email" name="email" class="form-input" placeholder="guest@example.com" required value="{{ email or '' }}">
+    </div>
+
+    <div style="margin-top: var(--space-3);">
+      <button type="submit" class="btn btn-primary" style="width: 100%; min-height: 48px;">
+        Find Reservation &rarr;
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+

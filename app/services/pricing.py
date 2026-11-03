@@ -2,6 +2,7 @@
 import math
 from datetime import date
 from typing import List, Dict, Any, Optional
+from collections import defaultdict
 from dataclasses import dataclass
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -26,8 +27,20 @@ class NightlyBreakdown:
 
 
 @dataclass
+class GSTSlabSummary:
+    rate_bps: int
+    percent: float
+    nights_count: int
+    taxable_amount_paise: int
+    gst_paise: int
+    label: str
+
+
+@dataclass
 class BookingPriceBreakdown:
     nights: List[NightlyBreakdown]
+    gst_summaries: List[GSTSlabSummary]
+    gst_text: str
     room_total_paise: int
     discount_paise: int
     gst_paise: int
@@ -67,6 +80,7 @@ def calculate_pricing(
     - Promo discount applies to the base room tariff.
     - GST applies to the discounted room tariff plus breakfast add-on.
     - Per night, round half up to the paisa, then sum.
+    - GST summary aggregates by chosen slab, dynamically constructing clear invoice text.
     """
     if not stay_dates:
         raise ValueError("Stay dates cannot be empty")
@@ -86,7 +100,6 @@ def calculate_pricing(
     for r in db_rates:
         daily_rates_map[r.date] = r.price_paise
 
-    # Check for missing rates; fallback to room base price if needed
     room_type = session.get(RoomType, room_type_id)
     if not room_type:
         raise ValueError(f"Invalid room type: {room_type_id}")
@@ -100,6 +113,7 @@ def calculate_pricing(
 
     nightly_items: List[NightlyBreakdown] = []
     num_nights = len(stay_dates)
+    slab_nights = defaultdict(list)
 
     for d in stay_dates:
         declared_tariff = daily_rates_map.get(d, room_type.base_price_paise)
@@ -109,7 +123,6 @@ def calculate_pricing(
         discount = 0
         if promo:
             if promo.discount_bps > 0:
-                # basis points: 10000 bps = 100%
                 discount += round_half_up(declared_tariff * (promo.discount_bps / 10000.0))
             if promo.discount_flat_paise > 0:
                 discount += round_half_up(promo.discount_flat_paise / float(num_nights))
@@ -120,11 +133,10 @@ def calculate_pricing(
 
         # GST slab chosen on declared tariff
         gst_bps = get_gst_rate_bps_for_tariff(session, declared_tariff)
-        # Calculate GST paise round half up
         gst_paise = round_half_up(taxable_amount * (gst_bps / 10000.0))
         total_night = taxable_amount + gst_paise
 
-        nightly_items.append(NightlyBreakdown(
+        item = NightlyBreakdown(
             date=d,
             base_rate_paise=declared_tariff,
             breakfast_addon_paise=breakfast_addon,
@@ -133,7 +145,33 @@ def calculate_pricing(
             gst_bps=gst_bps,
             gst_paise=gst_paise,
             total_night_paise=total_night
+        )
+        nightly_items.append(item)
+        slab_nights[gst_bps].append(item)
+
+    # Build GST slab summary
+    gst_summaries: List[GSTSlabSummary] = []
+    label_parts = []
+    for bps in sorted(slab_nights.keys()):
+        items = slab_nights[bps]
+        count = len(items)
+        taxable = sum(i.taxable_amount_paise for i in items)
+        gst_amt = sum(i.gst_paise for i in items)
+        pct = bps / 100.0
+        pct_str = f"{int(pct)}%" if pct.is_integer() else f"{pct:.1f}%"
+        night_word = "night" if count == 1 else "nights"
+        label = f"GST {pct_str} x {count} {night_word}"
+        label_parts.append(label)
+        gst_summaries.append(GSTSlabSummary(
+            rate_bps=bps,
+            percent=pct,
+            nights_count=count,
+            taxable_amount_paise=taxable,
+            gst_paise=gst_amt,
+            label=label
         ))
+
+    gst_text = ", ".join(label_parts) if label_parts else "GST"
 
     # Sum totals
     room_total_paise = sum(n.base_rate_paise + n.breakfast_addon_paise for n in nightly_items)
@@ -143,6 +181,8 @@ def calculate_pricing(
 
     return BookingPriceBreakdown(
         nights=nightly_items,
+        gst_summaries=gst_summaries,
+        gst_text=gst_text,
         room_total_paise=room_total_paise,
         discount_paise=discount_paise,
         gst_paise=gst_paise,

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Reservation Hold Expired — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 580px; padding: var(--space-7) var(--space-4) var(--space-8); text-align: center;">
+  <span class="label-caps" style="color: var(--color-accent);">RESERVATION NOTICE</span>
+  <h1 style="font-size: 2rem; margin: var(--space-2) 0 var(--space-3);">Your Booking Hold Has Expired</h1>
+  
+  {% if message %}
+  <p style="color: var(--color-ink); font-weight: 500; line-height: 1.6; margin-bottom: var(--space-5);">
+    {{ message }}
+  </p>
+  {% else %}
+  <p style="color: var(--color-muted); line-height: 1.6; margin-bottom: var(--space-5);">
+    To prevent overbooking on our direct allotment, room reservations are held for 10 minutes while payment is processed. The hold for this session has elapsed, and the room has been returned to available estate stock.
+  </p>
+  {% endif %}
+
+  <div style="display: flex; gap: var(--space-3); justify-content: center;">
+    <a href="/#rooms" class="btn btn-primary">Check Current Availability &rarr;</a>
+    <a href="/" class="btn btn-secondary">Return to Estate Home</a>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,70 @@
+{% if is_available %}
+<div class="printed-bill">
+  <div style="border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-2); margin-bottom: var(--space-2);">
+    <span class="label-caps">PROVISIONAL TARIFF BILL ({{ breakdown.nights | length }} NIGHTS)</span>
+  </div>
+
+  {% for n in breakdown.nights %}
+  <div class="bill-line">
+    <span>{{ n.date | format_date_short }} (Base rate)</span>
+    <span class="dot-leader"></span>
+    <span class="bill-val">{{ n.base_rate_paise | format_paise }}</span>
+  </div>
+  {% if n.breakfast_addon_paise > 0 %}
+  <div class="bill-line" style="font-size: 0.85rem; color: var(--color-muted);">
+    <span>&nbsp;&nbsp;+ Gourmet Breakfast add-on</span>
+    <span class="dot-leader"></span>
+    <span class="bill-val">{{ n.breakfast_addon_paise | format_paise }}</span>
+  </div>
+  {% endif %}
+  {% if n.discount_paise > 0 %}
+  <div class="bill-line" style="font-size: 0.85rem; color: var(--color-accent);">
+    <span>&nbsp;&nbsp;&minus; Promo discount</span>
+    <span class="dot-leader"></span>
+    <span class="bill-val">&minus;{{ n.discount_paise | format_paise }}</span>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% for gst in breakdown.gst_summaries %}
+  <div class="bill-line">
+    <span>{{ gst.label }}</span>
+    <span class="dot-leader"></span>
+    <span class="bill-val">{{ gst.gst_paise | format_paise }}</span>
+  </div>
+  {% endfor %}
+
+  <div class="bill-line bill-total">
+    <span>Total Payable</span>
+    <span class="dot-leader"></span>
+    <span class="bill-val">{{ breakdown.grand_total_paise | format_paise }}</span>
+  </div>
+
+  <div style="margin-top: var(--space-4);">
+    <a href="/book?room_type_id={{ room_type.id }}&rate_plan_id={{ rate_plan_id }}&check_in={{ check_in }}&check_out={{ check_out }}&num_guests={{ num_guests }}{% if promo_code %}&promo_code={{ promo_code }}{% endif %}" 
+       class="btn btn-primary" 
+       style="width: 100%;">
+      Continue to Guest Details &rarr;
+    </a>
+  </div>
+</div>
+{% else %}
+<div class="printed-bill" style="border-left: 3px solid var(--color-accent);">
+  <span class="label-caps" style="color: var(--color-accent);">DATES UNAVAILABLE</span>
+  <p style="margin: var(--space-2) 0;">The selected dates are currently sold out or blacked out for {{ room_type.name }}.</p>
+  {% if nearest_dates %}
+  <p class="caption-line">Nearest available dates for a {{ requested_nights }}-night stay:</p>
+  <ul style="list-style: none; margin-top: var(--space-2);">
+    {% for cand in nearest_dates %}
+    <li style="margin-bottom: var(--space-2);">
+      <a href="/rooms/{{ room_type.id }}?check_in={{ cand.check_in }}&check_out={{ cand.check_out }}" 
+         style="color: var(--color-accent); font-weight: 600;">
+        {{ cand.check_in | format_date_str }} &mdash; {{ cand.check_out | format_date_str }} &rarr;
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+

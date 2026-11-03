@@ -1,0 +1,542 @@
+/* Estate Tariff Card - Master Stylesheet */
+@import url('/static/tokens.css');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: var(--font-serif);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  line-height: 1.5;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabular figures for money, dates, numbers */
+.tabular, .tariff-price, .bill-val, .cal-price, .ref-code {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Links */
+a {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--color-border);
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--color-accent);
+  text-decoration-color: var(--color-accent);
+}
+
+/* Focus states for accessibility */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Typography elements */
+h1, h2, h3, h4 {
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--color-ink);
+}
+
+.caption-line {
+  font-style: italic;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.label-caps {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+/* Layout container */
+.container {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+/* Header */
+.site-header {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4) 0;
+  background-color: var(--color-paper);
+}
+
+.header-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.brand {
+  font-size: 1.35rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: var(--color-ink);
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--space-5);
+  list-style: none;
+}
+
+.nav-links a {
+  font-size: 0.9rem;
+  text-decoration: none;
+  color: var(--color-muted);
+}
+
+.nav-links a:hover {
+  color: var(--color-ink);
+}
+
+/* Footer */
+.site-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-6) 0 var(--space-7);
+  background-color: var(--color-paper-dark);
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
+
+.footer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Hero Section */
+.hero-section {
+  padding: var(--space-5) 0 var(--space-6);
+}
+
+.hero-img-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background-color: var(--color-paper-dark);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hero-caption {
+  margin-top: var(--space-3);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+/* Asymmetric Tariff Rows */
+.tariff-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  padding: var(--space-6) 0 var(--space-8);
+}
+
+.tariff-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.tariff-row.row-reversed {
+  grid-template-columns: 1fr 1.2fr;
+}
+
+.tariff-row.row-reversed .tariff-card {
+  order: 1;
+}
+
+.tariff-row.row-reversed .tariff-image-wrap {
+  order: 2;
+}
+
+.tariff-image-wrap {
+  aspect-ratio: 3 / 2;
+  background-color: var(--color-paper-dark);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.tariff-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tariff-card {
+  background-color: var(--color-paper-light);
+  border: 1px solid var(--color-border);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tariff-card h2 {
+  font-size: 1.6rem;
+  font-weight: 500;
+}
+
+.tariff-desc {
+  color: var(--color-muted);
+  font-size: 0.95rem;
+}
+
+.tariff-meta {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3) 0;
+  margin: var(--space-2) 0;
+  font-size: 0.9rem;
+}
+
+.tariff-price-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tariff-price {
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-5);
+  font-family: inherit;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.btn-primary {
+  background-color: var(--color-accent);
+  color: #FFFFFF;
+  border-color: var(--color-accent);
+}
+
+.btn-primary:hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: #FFFFFF;
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: var(--color-ink);
+  border-color: var(--color-border-dark);
+}
+
+.btn-secondary:hover {
+  background-color: var(--color-paper-dark);
+  color: var(--color-ink);
+}
+
+/* Form inputs (min 44px height) */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.form-input, .form-select {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-family: inherit;
+  font-size: 1rem;
+  border: 1px solid var(--color-border);
+  background-color: #FFFFFF;
+  color: var(--color-ink);
+  border-radius: var(--radius-sm);
+}
+
+.form-input:focus, .form-select:focus {
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+.checkbox-group {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-2) 0;
+}
+
+.checkbox-input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  cursor: pointer;
+}
+
+/* Stepper */
+.stepper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) 0 var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--space-6);
+}
+
+.step-item {
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+.step-item.active {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.step-sep {
+  color: var(--color-border);
+}
+
+/* Printed Bill with Dotted Leaders */
+.printed-bill {
+  background-color: var(--color-paper-light);
+  border: 1px solid var(--color-border);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bill-line {
+  display: flex;
+  align-items: baseline;
+  font-size: 0.95rem;
+}
+
+.dot-leader {
+  flex-grow: 1;
+  border-bottom: 1px dotted var(--color-muted);
+  margin: 0 var(--space-2);
+  min-width: 20px;
+}
+
+.bill-val {
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bill-total {
+  border-top: 1px solid var(--color-border-dark);
+  padding-top: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.bill-total .bill-val {
+  color: var(--color-accent);
+  font-size: 1.25rem;
+}
+
+/* Visual Calendar Grid */
+.calendar-wrap {
+  margin: var(--space-5) 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+}
+
+.cal-day-header {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--color-muted);
+  padding: var(--space-1) 0;
+}
+
+.cal-cell {
+  background-color: #FFFFFF;
+  border: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-1);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 52px;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+}
+
+.cal-cell.sold-out, .cal-cell.blackout {
+  background-color: var(--color-mist);
+  color: var(--color-muted);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.cal-date {
+  font-weight: 600;
+}
+
+.cal-price {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.scarcity-badge {
+  font-size: 0.7rem;
+  color: var(--color-accent);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Tear-line / Pass Confirmation */
+.tear-pass {
+  background-color: var(--color-paper-light);
+  border: 1px solid var(--color-border);
+  position: relative;
+  margin: var(--space-5) auto;
+  max-width: 680px;
+}
+
+.pass-header {
+  padding: var(--space-6);
+  border-bottom: 2px dashed var(--color-border-dark);
+}
+
+.pass-body {
+  padding: var(--space-6);
+}
+
+.ref-code {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-accent);
+  margin: var(--space-2) 0;
+}
+
+/* Mobile Sticky Bottom Bar */
+.mobile-sticky-bar {
+  display: none;
+}
+
+/* Hold Timer Bar */
+.hold-timer-line {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background-color: var(--color-accent);
+  width: 100%;
+  z-index: 1000;
+  transition: width 1s linear;
+}
+
+/* Responsive / Mobile (375px) */
+@media (max-width: 768px) {
+  .tariff-row, .tariff-row.row-reversed {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  
+  .tariff-row.row-reversed .tariff-card {
+    order: 2;
+  }
+  
+  .tariff-row.row-reversed .tariff-image-wrap {
+    order: 1;
+  }
+
+  .calendar-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .mobile-sticky-bar {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--color-paper-light);
+    border-top: 1px solid var(--color-border-dark);
+    padding: var(--space-3) var(--space-4);
+    justify-content: space-between;
+    align-items: center;
+    z-index: 900;
+  }
+
+  /* Padding at page bottom so sticky bar does not cover fields */
+  .has-mobile-bar {
+    padding-bottom: 90px;
+  }
+}
+
+/* Print Stylesheet */
+@media print {
+  body {
+    background: #FFF;
+    color: #000;
+  }
+  .site-header, .site-footer, .no-print {
+    display: none !important;
+  }
+  .tear-pass {
+    border: 1px solid #000;
+    max-width: 100%;
+  }
+}
+

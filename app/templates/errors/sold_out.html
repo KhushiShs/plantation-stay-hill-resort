@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Dates Sold Out — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 620px; padding: var(--space-7) var(--space-4) var(--space-8);">
+  <span class="label-caps" style="color: var(--color-accent);">ALLOTMENT NOTICE</span>
+  <h1 style="font-size: 2rem; margin: var(--space-2) 0 var(--space-3);">Selected Dates Are Fully Booked</h1>
+  
+  <p style="color: var(--color-muted); line-height: 1.6; margin-bottom: var(--space-5);">
+    Our website allotment for these dates has reached full capacity. As a working estate with limited keys, we never sell beyond confirmed inventory.
+  </p>
+
+  {% if nearest_dates %}
+  <div class="tariff-card" style="margin-bottom: var(--space-5);">
+    <span class="label-caps">RECOMMENDED ALTERNATE DATES</span>
+    <ul style="list-style: none; margin-top: var(--space-3);">
+      {% for cand in nearest_dates %}
+      <li style="border-bottom: 1px solid var(--color-border); padding: var(--space-2) 0; display: flex; justify-content: space-between;">
+        <span>{{ cand.check_in | format_date_str }} &mdash; {{ cand.check_out | format_date_str }}</span>
+        <a href="/rooms/{{ room_type_id }}?check_in={{ cand.check_in }}&check_out={{ cand.check_out }}" style="font-weight: 600; color: var(--color-accent);">
+          Select Dates &rarr;
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div style="display: flex; gap: var(--space-3);">
+    <a href="/#rooms" class="btn btn-primary">Browse Other Accommodations</a>
+    <a href="/" class="btn btn-secondary">Return Home</a>
+  </div>
+</div>
+{% endblock %}
+

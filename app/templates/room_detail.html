@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}{{ room.name }} — Tariff & Booking — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top: var(--space-6); padding-bottom: var(--space-8);">
+  <div style="margin-bottom: var(--space-4);">
+    <a href="/#rooms" class="caption-line">&larr; Return to All Accommodations</a>
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-7);" class="tariff-row">
+    <!-- Left Column: Gallery & Details & Calendar -->
+    <div>
+      <div class="hero-img-wrap" style="aspect-ratio: 16 / 10;">
+        <img src="{{ room.image_url }}" alt="{{ room.name }}" class="hero-img">
+      </div>
+
+      <div style="margin-top: var(--space-5);">
+        <span class="label-caps">CHIKKAMAGALURU COFFEE ESTATE</span>
+        <h1 style="font-size: 2.2rem; margin: var(--space-2) 0;">{{ room.name }}</h1>
+        <p style="font-size: 1.05rem; color: var(--color-muted); line-height: 1.6;">{{ room.description }}</p>
+
+        <div class="tariff-meta" style="margin-top: var(--space-4);">
+          <div>
+            <strong>Base Occupancy:</strong> {{ room.base_occupancy }} Adults<br>
+            <strong>Maximum Capacity:</strong> {{ room.max_occupancy }} Persons
+          </div>
+          <div>
+            <strong>Physical Inventory:</strong> {{ room.total_inventory }} Keys<br>
+            <strong>Website Allotment:</strong> Managed Daily
+          </div>
+        </div>
+      </div>
+
+      <!-- Minimal Tariff Calendar -->
+      <div class="calendar-wrap">
+        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-2);">Tariff & Live Availability Calendar (Next 30 Days)</h2>
+        <p class="caption-line" style="margin-bottom: var(--space-3);">Dates with remaining stock &le; 3 show real-time scarcity. Struck-through dates in mist are sold out or blacked out.</p>
+
+        <div class="calendar-grid">
+          {% for day in calendar_days %}
+          <div class="cal-cell {% if not day.available %}sold-out{% endif %}">
+            <span class="cal-date">{{ day.date.day }} {{ day.date.strftime('%b') }}</span>
+            {% if day.available %}
+            <span class="cal-price">{{ day.price_paise | format_paise }}</span>
+            {% if day.remaining <= 3 %}
+            <span class="scarcity-badge">{{ day.remaining }} left</span>
+            {% endif %}
+            {% else %}
+            <span class="cal-price">Full</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Booking & Quote Panel -->
+    <div>
+      <div class="tariff-card" style="position: sticky; top: var(--space-4);">
+        <span class="label-caps">DIRECT BOOKING TARIFF</span>
+        <h2 style="font-size: 1.4rem;">Select Dates & Plan</h2>
+
+        <form id="quote-form" 
+              hx-get="/rooms/{{ room.id }}/quote" 
+              hx-trigger="change, keyup delay:400ms from:#promo-input" 
+              hx-target="#quote-result" 
+              hx-indicator="#quote-spinner">
+          
+          <div class="form-group">
+            <label for="check_in" class="form-label">Check-in Date</label>
+            <input type="date" id="check_in" name="check_in" class="form-input" value="{{ default_check_in }}" required>
+          </div>
+
+          <div class="form-group">
+            <label for="check_out" class="form-label">Check-out Date</label>
+            <input type="date" id="check_out" name="check_out" class="form-input" value="{{ default_check_out }}" required>
+          </div>
+
+          <div class="form-group">
+            <label for="num_guests" class="form-label">Number of Guests</label>
+            <select id="num_guests" name="num_guests" class="form-select">
+              {% for g in range(1, room.max_occupancy + 1) %}
+              <option value="{{ g }}" {% if g == 2 %}selected{% endif %}>{{ g }} {% if g == 1 %}Guest{% else %}Guests{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="rate_plan_id" class="form-label">Rate Plan</label>
+            <select id="rate_plan_id" name="rate_plan_id" class="form-select">
+              {% for plan in rate_plans %}
+              <option value="{{ plan.id }}">
+                {{ plan.name }} {% if plan.breakfast_addon_paise > 0 %}(+{{ plan.breakfast_addon_paise | format_paise }}/person){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="promo-input" class="form-label">Promotional Code</label>
+            <input type="text" id="promo-input" name="promo_code" class="form-input" placeholder="e.g. WELCOME10">
+          </div>
+        </form>
+
+        <div id="quote-spinner" class="htmx-indicator caption-line" style="text-align: center; margin: var(--space-2) 0;">
+          Calculating live estate tariff...
+        </div>
+
+        <div id="quote-result" aria-live="polite" style="margin-top: var(--space-3);">
+          <!-- Initial quote fragment loaded server-side -->
+          {{ initial_quote_html | safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

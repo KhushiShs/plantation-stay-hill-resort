@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Estate Tariff & Rooms — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-img-wrap">
+      <img src="/static/images/estate-hero.webp" 
+           alt="Panoramic view of coffee estate grounds and shade trees in Chikkamagaluru" 
+           class="hero-img" 
+           fetchpriority="high"
+           width="1600" 
+           height="900">
+    </div>
+    <p class="hero-caption caption-line">
+      A working coffee estate in the Bababudangiri hills of Chikkamagaluru. 76 keys across 64 rooms and 12 villas.
+    </p>
+  </div>
+</section>
+
+<section id="rooms" class="container">
+  <div class="tariff-grid">
+    {% for room in room_types %}
+    <article class="tariff-row {% if loop.index % 2 == 0 %}row-reversed{% endif %}">
+      <div class="tariff-image-wrap">
+        <img src="{{ room.image_url }}" 
+             alt="{{ room.name }} at {{ app_name }}" 
+             class="tariff-image" 
+             loading="lazy" 
+             width="1200" 
+             height="800">
+      </div>
+      <div class="tariff-card">
+        <span class="label-caps">{{ room.total_inventory }} KEYS AVAILABLE / SLEEPS {{ room.max_occupancy }}</span>
+        <h2>{{ room.name }}</h2>
+        <p class="tariff-desc">{{ room.description }}</p>
+        
+        <div class="tariff-meta">
+          <span>Base Occupancy: {{ room.base_occupancy }} Adults</span>
+          <span>Max: {{ room.max_occupancy }}</span>
+        </div>
+
+        <div class="tariff-price-box">
+          <span class="label-caps">TARIFF FROM</span>
+          <span class="tariff-price">{{ room.min_rate_paise | format_paise }} <span style="font-size: 0.9rem; font-weight: normal; color: var(--color-muted);">/ night</span></span>
+          <span class="caption-line">GST added at checkout per tariff slab</span>
+        </div>
+
+        <div style="margin-top: var(--space-3);">
+          <a href="/rooms/{{ room.id }}" class="btn btn-primary" style="width: 100%;">View Dates & Tariff Card &rarr;</a>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}
+
