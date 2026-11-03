@@ -44,7 +44,7 @@ def seed_database(session: Session, start_date: date = None) -> None:
             max_occupancy=3,
             total_inventory=64,
             base_price_paise=700000,
-            image_url="/static/images/estate-room.webp"
+            image_url="/static/img/estate-room-1200.webp"
         ),
         RoomType(
             id="luxury-villa",
@@ -54,12 +54,15 @@ def seed_database(session: Session, start_date: date = None) -> None:
             max_occupancy=4,
             total_inventory=12,
             base_price_paise=1600000,
-            image_url="/static/images/luxury-villa.webp"
+            image_url="/static/img/luxury-villa-1200.webp"
         )
     ]
     for rt in room_types_data:
-        if not session.get(RoomType, rt.id):
+        existing_rt = session.get(RoomType, rt.id)
+        if not existing_rt:
             session.add(rt)
+        else:
+            existing_rt.image_url = rt.image_url
     session.flush()
 
     # 3. Rate Plans

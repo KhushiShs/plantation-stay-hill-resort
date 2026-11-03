@@ -11,8 +11,16 @@
   <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-7);" class="tariff-row">
     <!-- Left Column: Gallery & Details & Calendar -->
     <div>
-      <div class="hero-img-wrap" style="aspect-ratio: 16 / 10;">
-        <img src="{{ room.image_url }}" alt="{{ room.name }}" class="hero-img">
+      <div class="hero-img-wrap" style="aspect-ratio: 16 / 10; background-color: {{ '#93897a' if room.id == 'estate-room' else '#706d52' }};">
+        <img src="{{ room.image_url }}" 
+             srcset="/static/img/{{ room.id }}-400.webp 400w, /static/img/{{ room.id }}-768.webp 768w, /static/img/{{ room.id }}-1200.webp 1200w"
+             sizes="(max-width: 600px) 400px, (max-width: 900px) 768px, 1200px"
+             alt="{{ room.name }} at {{ app_name }}" 
+             class="hero-img"
+             fetchpriority="high"
+             decoding="async"
+             width="1200" 
+             height="800">
       </div>
 
       <div style="margin-top: var(--space-5);">
@@ -116,4 +124,3 @@
   </div>
 </div>
 {% endblock %}
-

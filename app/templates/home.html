@@ -5,13 +5,16 @@
 {% block content %}
 <section class="hero-section">
   <div class="container">
-    <div class="hero-img-wrap">
-      <img src="/static/images/estate-hero.webp" 
+    <div class="hero-img-wrap" style="background-color: #455439;">
+      <img src="/static/img/estate-hero-1200.webp" 
+           srcset="/static/img/estate-hero-400.webp 400w, /static/img/estate-hero-768.webp 768w, /static/img/estate-hero-1200.webp 1200w"
+           sizes="(max-width: 600px) 400px, (max-width: 900px) 768px, 1200px"
            alt="Panoramic view of coffee estate grounds and shade trees in Chikkamagaluru" 
            class="hero-img" 
            fetchpriority="high"
-           width="1600" 
-           height="900">
+           decoding="async"
+           width="1200" 
+           height="800">
     </div>
     <p class="hero-caption caption-line">
       A working coffee estate in the Bababudangiri hills of Chikkamagaluru. 76 keys across 64 rooms and 12 villas.
@@ -23,11 +26,14 @@
   <div class="tariff-grid">
     {% for room in room_types %}
     <article class="tariff-row {% if loop.index % 2 == 0 %}row-reversed{% endif %}">
-      <div class="tariff-image-wrap">
+      <div class="tariff-image-wrap" style="background-color: {{ '#93897a' if room.id == 'estate-room' else '#706d52' }};">
         <img src="{{ room.image_url }}" 
+             srcset="/static/img/{{ room.id }}-400.webp 400w, /static/img/{{ room.id }}-768.webp 768w, /static/img/{{ room.id }}-1200.webp 1200w"
+             sizes="(max-width: 600px) 400px, (max-width: 900px) 768px, 1200px"
              alt="{{ room.name }} at {{ app_name }}" 
              class="tariff-image" 
              loading="lazy" 
+             decoding="async"
              width="1200" 
              height="800">
       </div>
@@ -48,7 +54,9 @@
         </div>
 
         <div style="margin-top: var(--space-3);">
-          <a href="/rooms/{{ room.id }}" class="btn btn-primary" style="width: 100%;">View Dates & Tariff Card &rarr;</a>
+          <a href="/rooms/{{ room.id }}" class="btn btn-primary" style="display: inline-block;">
+            View Live Tariff & Book &rarr;
+          </a>
         </div>
       </div>
     </article>
@@ -56,4 +64,3 @@
   </div>
 </section>
 {% endblock %}
-
