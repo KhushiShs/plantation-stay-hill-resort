@@ -1,0 +1,114 @@
+[
+  {
+    "id": "ENQ-5001",
+    "channel": "web_form",
+    "sender_name": "Manish Tewari",
+    "sender_contact": "manish.tewari@example.com",
+    "raw_message": "Need to block an estate villa from 10 to 14 December for 2 adults with breakfast plan.",
+    "expected_category": "room"
+  },
+  {
+    "id": "ENQ-5002",
+    "channel": "email_sim",
+    "sender_name": "Sanya Agarwal",
+    "sender_contact": "sanya.a@destinationevents.example",
+    "raw_message": "Enquiring about your outdoor lawn capacity for an evening sangeet and wedding ceremony with 350 attendees next February.",
+    "expected_category": "wedding"
+  },
+  {
+    "id": "ENQ-5003",
+    "channel": "email_sim",
+    "sender_name": "Nikhil Kamath",
+    "sender_contact": "nikhil@ventures.example",
+    "raw_message": "Can we reserve your estate conference facility and projector for a 3-day startup offsite with 20 founders in March?",
+    "expected_category": "offsite"
+  },
+  {
+    "id": "ENQ-5004",
+    "channel": "web_form",
+    "sender_name": "Vivek Oberoi",
+    "sender_contact": "vivek.o@example.com",
+    "raw_message": "Our bathroom had no hot water during our weekend stay and the front desk staff was extremely rude and unhelpful.",
+    "expected_category": "complaint"
+  },
+  {
+    "id": "ENQ-5005",
+    "channel": "whatsapp_sim",
+    "sender_name": "Pooja Hegde",
+    "sender_contact": "+919811122233",
+    "raw_message": "Can 5 friends stay together in 2 estate rooms next weekend?",
+    "expected_category": "room"
+  },
+  {
+    "id": "ENQ-5006",
+    "channel": "whatsapp_sim",
+    "sender_name": "Alok Nath",
+    "sender_contact": "+919822233344",
+    "raw_message": "Bhaiya destination wedding ke liye mandap aur lawn setup dekhna tha December shadi ke liye.",
+    "expected_category": "wedding"
+  },
+  {
+    "id": "ENQ-5007",
+    "channel": "email_sim",
+    "sender_name": "Swati Piramal",
+    "sender_contact": "swati@pharma-corp.example",
+    "raw_message": "We need to host an executive retreat conclave for our regional managers, approximately 35 pax with breakout spaces.",
+    "expected_category": "offsite"
+  },
+  {
+    "id": "ENQ-5008",
+    "channel": "web_form",
+    "sender_name": "Rajesh Khanna",
+    "sender_contact": "rajesh.k@example.com",
+    "raw_message": "Food was stale at dinner and my child fell sick. The resort manager showed zero empathy, unacceptable behavior!",
+    "expected_category": "complaint"
+  },
+  {
+    "id": "ENQ-5009",
+    "channel": "whatsapp_sim",
+    "sender_name": "Simran Kaur",
+    "sender_contact": "+919833344455",
+    "raw_message": "Hello, can you send details?",
+    "expected_category": "unsorted"
+  },
+  {
+    "id": "ENQ-5010",
+    "channel": "web_form",
+    "sender_name": "Tanmay Bhat",
+    "sender_contact": "tanmay@comedy.example",
+    "raw_message": "Looking to host an annual creators hackathon with high-speed internet and stay for 15 members.",
+    "expected_category": "offsite"
+  },
+  {
+    "id": "ENQ-5011",
+    "channel": "email_sim",
+    "sender_name": "Leela Samson",
+    "sender_contact": "leela@arts.example",
+    "raw_message": "Looking for reception venue for a family marriage function in January, around 180 guests.",
+    "expected_category": "wedding"
+  },
+  {
+    "id": "ENQ-5012",
+    "channel": "whatsapp_sim",
+    "sender_name": "Kishore Kumar",
+    "sender_contact": "+919844455566",
+    "raw_message": "We had a dispute regarding the extra bed charges at check-out, staff was argumentative and worst experience ever.",
+    "expected_category": "complaint"
+  },
+  {
+    "id": "ENQ-5013",
+    "channel": "web_form",
+    "sender_name": "Anil Kumble",
+    "sender_contact": "anil.k@cricket.example",
+    "raw_message": "Family stay enquiry: 2 adults, 1 child for 3 nights in January, room only plan.",
+    "expected_category": "room"
+  },
+  {
+    "id": "ENQ-5014",
+    "channel": "whatsapp_sim",
+    "sender_name": "Farhan Akhtar",
+    "sender_contact": "+919855566677",
+    "raw_message": "Maybe an offsite or maybe a couple rooms for personal holiday, still discussing with team.",
+    "expected_category": "unsorted"
+  }
+]
