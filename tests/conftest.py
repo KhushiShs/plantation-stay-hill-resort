@@ -1,6 +1,10 @@
 """Fixtures and test setup. Aborts if DB name does not end in _test."""
-import pytest
 import os
+
+# Ensure tests run under development mode so https_only is False for test client sessions
+os.environ.setdefault("APP_ENV", "development")
+
+import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from app.config import settings
