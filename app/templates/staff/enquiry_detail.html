@@ -1,0 +1,197 @@
+{% extends "staff/base_staff.html" %}
+
+{% block title %}{{ enquiry.id }} — Enquiry Detail{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: var(--space-4);">
+  <a href="/staff/enquiries" style="font-size: 0.85rem; color: var(--color-ink-muted); text-decoration: none;">← Back to Inbox</a>
+</div>
+
+<div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-4); margin-bottom: var(--space-4);">
+  <div>
+    <h1 style="font-size: 1.75rem; margin-bottom: 4px;">{{ enquiry.id }}</h1>
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--color-ink-muted);">
+      <span>Channel: <strong>{{ enquiry.channel }}</strong></span>
+      <span>•</span>
+      <span>Category: <strong>{{ enquiry.category|upper }}</strong></span>
+      <span>•</span>
+      <span>Owner: <strong>{{ enquiry.owner_role }}</strong></span>
+      <span>•</span>
+      <span>Status: <strong class="status-badge {% if enquiry.status == 'sent' %}badge-confirmed{% elif enquiry.status == 'drafted' %}badge-held{% else %}badge-refund{% endif %}">{{ enquiry.status }}</strong></span>
+    </div>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <!-- One-click Re-route form -->
+    <form method="POST" action="/staff/enquiries/{{ enquiry.id }}/reroute" style="margin: 0; display: flex; align-items: center; gap: 6px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label style="font-size: 0.8rem; color: var(--color-ink-muted);">Re-route:</label>
+      <select name="new_category" style="font-size: 0.82rem; padding: 5px 8px; border: 1px solid var(--color-border); background: #FFF;">
+        <option value="room" {% if enquiry.category == 'room' %}selected{% endif %}>Room (reservations)</option>
+        <option value="wedding" {% if enquiry.category == 'wedding' %}selected{% endif %}>Wedding (sales)</option>
+        <option value="offsite" {% if enquiry.category == 'offsite' %}selected{% endif %}>Offsite (sales)</option>
+        <option value="complaint" {% if enquiry.category == 'complaint' %}selected{% endif %}>Complaint (gm)</option>
+        <option value="unsorted" {% if enquiry.category == 'unsorted' %}selected{% endif %}>Unsorted (gm)</option>
+      </select>
+      <button type="submit" class="btn" style="background: var(--paper-light); border: 1px solid var(--color-border); font-size: 0.8rem; padding: 5px 10px;">Update</button>
+    </form>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert-banner alert-error" style="margin-bottom: var(--space-4);">
+  {{ error }}
+</div>
+{% endif %}
+
+{% if success_msg %}
+<div class="alert-banner alert-success" style="margin-bottom: var(--space-4);">
+  {{ success_msg }}
+</div>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: var(--space-5); margin-bottom: var(--space-6);" class="detail-split-grid">
+  <!-- Left Column: Guest Intake & Extracted Signals -->
+  <div style="display: flex; flex-direction: column; gap: var(--space-4);">
+    <div class="estate-card" style="background: #FFF; border: 1px solid var(--color-border); padding: 20px;">
+      <h2 style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+        Guest Details
+      </h2>
+      <div style="display: grid; grid-template-columns: 100px 1fr; gap: 8px; font-size: 0.88rem; margin-bottom: 16px;">
+        <div style="color: var(--color-ink-muted);">Name:</div>
+        <div style="font-weight: 500;">{{ enquiry.sender_name }}</div>
+        <div style="color: var(--color-ink-muted);">Contact:</div>
+        <div>{{ enquiry.sender_contact }}</div>
+        <div style="color: var(--color-ink-muted);">Received:</div>
+        <div>{{ enquiry.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+        <div style="color: var(--color-ink-muted);">Waiting:</div>
+        <div>
+          {% if is_overdue %}
+          <strong style="color: var(--color-accent);">{{ waiting_mins }} min (OVERDUE)</strong>
+          {% else %}
+          {{ waiting_mins }} min
+          {% endif %}
+        </div>
+        {% if enquiry.first_replied_at %}
+        <div style="color: var(--color-ink-muted);">Replied:</div>
+        <div style="color: #155724; font-weight: 500;">{{ enquiry.first_replied_at.strftime('%d %b %Y, %I:%M %p') }}</div>
+        {% endif %}
+      </div>
+
+      <h2 style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+        Original Guest Message
+      </h2>
+      <div style="font-size: 0.9rem; line-height: 1.5; background: var(--color-paper-light); padding: 14px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); white-space: pre-wrap; font-style: italic;">
+        {{ enquiry.raw_message }}
+      </div>
+    </div>
+
+    <!-- Extracted Signals Badge Panel -->
+    <div class="estate-card" style="background: #FFF; border: 1px solid var(--color-border); padding: 20px;">
+      <h2 style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+        Classification & Extracted Signals
+      </h2>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 8px; font-size: 0.88rem;">
+        <div style="color: var(--color-ink-muted);">Classifier Method:</div>
+        <div>
+          <span style="display: inline-block; padding: 2px 6px; font-size: 0.75rem; background: #EFE9DC; border-radius: var(--radius-sm);">
+            {{ enquiry.classified_by|upper }}
+          </span>
+          <span style="font-size: 0.8rem; color: var(--color-ink-muted); margin-left: 6px;">(Confidence: {{ (enquiry.confidence * 100)|round|int }}%)</span>
+        </div>
+        <div style="color: var(--color-ink-muted);">Extracted Dates:</div>
+        <div>
+          {% if enquiry.extracted_check_in and enquiry.extracted_check_out %}
+          {{ enquiry.extracted_check_in.strftime('%d %b %Y') }} → {{ enquiry.extracted_check_out.strftime('%d %b %Y') }}
+          {% else %}
+          <em style="color: var(--color-ink-muted);">None specified</em>
+          {% endif %}
+        </div>
+        <div style="color: var(--color-ink-muted);">Extracted Guests:</div>
+        <div>{{ enquiry.extracted_guests or 'None' }}</div>
+        <div style="color: var(--color-ink-muted);">Extracted Budget:</div>
+        <div>{{ enquiry.extracted_budget or 'None' }}</div>
+        <div style="color: var(--color-ink-muted);">Summary:</div>
+        <div style="font-weight: 500;">{{ enquiry.summary }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column: Editable Draft Reply & Actions -->
+  <div class="estate-card" style="background: #FFF; border: 1px solid var(--color-border); padding: 20px; display: flex; flex-direction: column;">
+    <h2 style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+      Staff Response Draft
+    </h2>
+    <p style="font-size: 0.82rem; color: var(--color-ink-muted); margin-bottom: 12px;">
+      Tariffs and availability are generated strictly from live rate tables. The Price Defense Guard will block sending if unverified money figures are added.
+    </p>
+
+    <form method="POST" action="/staff/enquiries/{{ enquiry.id }}/draft" style="flex: 1; display: flex; flex-direction: column; margin-bottom: 16px;">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <textarea name="draft_reply" rows="12" style="width: 100%; flex: 1; padding: 12px; border: 1px solid var(--color-border); font-family: inherit; font-size: 0.9rem; line-height: 1.5; resize: vertical; margin-bottom: 12px;">{{ enquiry.draft_reply or '' }}</textarea>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" class="btn" style="background: var(--paper-light); border: 1px solid var(--color-border); font-size: 0.85rem; padding: 6px 14px;">Save Draft</button>
+      </div>
+    </form>
+
+    <!-- Simulated Send Reply Form -->
+    <div style="border-top: 1px solid var(--color-border); padding-top: 14px; margin-top: auto;">
+      <form method="POST" action="/staff/enquiries/{{ enquiry.id }}/send" style="margin: 0; display: flex; justify-content: space-between; align-items: center;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div style="font-size: 0.8rem; color: var(--color-ink-muted);">
+          {% if enquiry.status == 'sent' %}
+          ✓ Reply previously sent on {{ enquiry.first_replied_at.strftime('%d %b %H:%M') }}
+          {% else %}
+          Drafts are not sent automatically. Staff must verify and click send.
+          {% endif %}
+        </div>
+        <button type="submit" class="btn btn-primary" style="font-size: 0.88rem; padding: 8px 18px;">
+          Send Reply (Simulated)
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Panel: Event Audit Trail -->
+<div class="estate-card" style="background: #FFF; border: 1px solid var(--color-border); padding: 20px;">
+  <h2 style="font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; border-bottom: 1px solid var(--color-border); padding-bottom: 6px;">
+    Enquiry Event Log & Audit Trail
+  </h2>
+  <div style="overflow-x: auto;">
+    <table class="ledger-table" style="margin-top: 0;">
+      <thead>
+        <tr>
+          <th>Timestamp</th>
+          <th>Event</th>
+          <th>Actor</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for evt in enquiry.events %}
+        <tr>
+          <td style="font-size: 0.82rem; white-space: nowrap;">{{ evt.created_at.strftime('%d %b %Y, %H:%M:%S') }}</td>
+          <td><span class="status-badge badge-held">{{ evt.event_type }}</span></td>
+          <td style="font-size: 0.85rem;">{{ evt.actor_role or 'system' }}</td>
+          <td style="font-size: 0.85rem; color: var(--color-ink-muted);">{{ evt.from_value or '—' }}</td>
+          <td style="font-size: 0.85rem; font-weight: 500;">{{ evt.to_value or '—' }}</td>
+          <td style="font-size: 0.85rem;">{{ evt.notes or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  @media (max-width: 768px) {
+    .detail-split-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+{% endblock %}

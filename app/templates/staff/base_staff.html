@@ -107,9 +107,13 @@
       {% if current_user %}
       <nav>
         <ul class="staff-nav">
+          <li><a href="/staff/enquiries" class="{% if active_tab == 'enquiries' %}active{% endif %}">Enquiries {% if gm_unread_alerts %}<span style="background: var(--color-accent); color: white; border-radius: 10px; padding: 1px 6px; font-size: 0.75rem;">{{ gm_unread_alerts }}</span>{% endif %}</a></li>
+          {% if current_user.role != 'sales' %}
           <li><a href="/staff/calendar" class="{% if active_tab == 'calendar' %}active{% endif %}">Tariff & Allotment</a></li>
           <li><a href="/staff/promos" class="{% if active_tab == 'promos' %}active{% endif %}">Promotions</a></li>
           <li><a href="/staff/bookings" class="{% if active_tab == 'bookings' %}active{% endif %}">Bookings & Refunds</a></li>
+          {% endif %}
+          <li><a href="/staff/simulate-intake" class="{% if active_tab == 'simulators' %}active{% endif %}">Simulators</a></li>
           <li>
             <form action="/staff/logout" method="post" style="display: inline; margin: 0;">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">

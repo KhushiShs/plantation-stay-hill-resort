@@ -13,7 +13,7 @@ from app.config import settings
 from app.db import get_db
 from app.models import (
     User, RoomType, DailyRate, Allotment, PromoCode, Booking, BookingNight,
-    Payment, AuditLog
+    Payment, AuditLog, Enquiry, EnquiryEvent, Alert
 )
 from app.security import (
     verify_password,
@@ -747,3 +747,273 @@ def export_bookings_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+# -------------------------------------------------------------
+# Staff Enquiry Inbox, Detail, Re-routing, and Alerts
+# -------------------------------------------------------------
+from app.services.router import is_overdue, working_minutes_between
+from app.services.enquiry_service import reroute_enquiry, save_enquiry_draft, send_enquiry_reply
+
+
+@router.get("/enquiries", response_class=HTMLResponse)
+def get_staff_enquiries(
+    request: Request,
+    lane: str = "all",
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Staff Enquiry Inbox with lane filtering, SLA counters, and GM overdue stats."""
+    # Generate response_overdue alerts lazily on page load
+    unreplied_enquiries = db.query(Enquiry).filter(Enquiry.status.in_(["new", "drafted"])).all()
+    for enq in unreplied_enquiries:
+        wait_m, overdue = is_overdue(enq.created_at)
+        if overdue:
+            existing = db.query(Alert).filter(
+                Alert.enquiry_id == enq.id,
+                Alert.alert_type == "response_overdue"
+            ).first()
+            if not existing:
+                db.add(Alert(
+                    enquiry_id=enq.id,
+                    target_role="gm",
+                    alert_type="response_overdue",
+                    message=f"Enquiry {enq.id} waiting {wait_m}m (>30m working hours target)."
+                ))
+    db.commit()
+
+    # RBAC category filters:
+    # sales: wedding, offsite
+    # reservations: room
+    # gm: all, unsorted, complaint
+    if current_user.role == "sales":
+        allowed_categories = ["wedding", "offsite"]
+    elif current_user.role == "reservations":
+        allowed_categories = ["room"]
+    else:  # gm
+        allowed_categories = ["room", "wedding", "offsite", "complaint", "unsorted"]
+
+    # Query enquiries
+    query = db.query(Enquiry).filter(Enquiry.category.in_(allowed_categories))
+
+    if lane != "all" and lane in allowed_categories:
+        query = query.filter(Enquiry.category == lane)
+
+    all_allowed = query.order_by(Enquiry.created_at.desc()).all()
+
+    # Calculate waiting minutes and overdue status
+    enquiry_items = []
+    overdue_count = 0
+    for e in all_allowed:
+        w_mins, overdue = is_overdue(e.created_at, e.first_replied_at)
+        if overdue and e.status in ("new", "drafted"):
+            overdue_count += 1
+        enquiry_items.append({
+            "enquiry": e,
+            "waiting_mins": w_mins,
+            "is_overdue": (overdue and e.status in ("new", "drafted"))
+        })
+
+    # Lane counts
+    all_enqs_base = db.query(Enquiry).filter(Enquiry.category.in_(allowed_categories)).all()
+    lane_counts = {
+        "all": len(all_enqs_base),
+        "room": sum(1 for e in all_enqs_base if e.category == "room"),
+        "wedding": sum(1 for e in all_enqs_base if e.category == "wedding"),
+        "offsite": sum(1 for e in all_enqs_base if e.category == "offsite"),
+        "complaint": sum(1 for e in all_enqs_base if e.category == "complaint"),
+        "unsorted": sum(1 for e in all_enqs_base if e.category == "unsorted"),
+    }
+
+    # GM stats: median first-reply time over last 7 days + active alerts
+    median_reply_minutes = None
+    gm_unread_alerts = 0
+    alerts = []
+    if current_user.role == "gm":
+        seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+        replied_enquiries = db.query(Enquiry).filter(
+            Enquiry.first_replied_at.isnot(None),
+            Enquiry.created_at >= seven_days_ago
+        ).all()
+
+        if replied_enquiries:
+            reply_times = sorted([
+                working_minutes_between(e.created_at, e.first_replied_at)
+                for e in replied_enquiries
+            ])
+            mid = len(reply_times) // 2
+            if len(reply_times) % 2 == 1:
+                median_reply_minutes = reply_times[mid]
+            else:
+                median_reply_minutes = (reply_times[mid - 1] + reply_times[mid]) // 2
+
+        alerts = db.query(Alert).filter(Alert.target_role == "gm", Alert.is_read.is_(False)).order_by(Alert.created_at.desc()).all()
+        gm_unread_alerts = len(alerts)
+
+    return templates.TemplateResponse("staff/enquiries.html", {
+        "request": request,
+        "current_user": current_user,
+        "active_tab": "enquiries",
+        "active_lane": lane,
+        "csrf_token": get_staff_csrf_token(request),
+        "enquiries": enquiry_items,
+        "lane_counts": lane_counts,
+        "overdue_count": overdue_count,
+        "median_reply_minutes": median_reply_minutes,
+        "gm_unread_alerts": gm_unread_alerts,
+        "alerts": alerts
+    })
+
+
+@router.get("/enquiries/{enquiry_id}", response_class=HTMLResponse)
+def get_enquiry_detail(
+    request: Request,
+    enquiry_id: str,
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Staff Enquiry Detail View: Raw message, extracted fields, editable draft, send, reroute."""
+    enquiry = db.get(Enquiry, enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+
+    # Enforce role visibility
+    if current_user.role == "sales" and enquiry.category not in ("wedding", "offsite"):
+        raise HTTPException(status_code=403, detail="Access forbidden: sales may only view wedding/offsite enquiries")
+    if current_user.role == "reservations" and enquiry.category != "room":
+        raise HTTPException(status_code=403, detail="Access forbidden: reservations may only view room enquiries")
+
+    w_mins, overdue = is_overdue(enquiry.created_at, enquiry.first_replied_at)
+
+    # GM unread alerts count
+    gm_unread = 0
+    if current_user.role == "gm":
+        gm_unread = db.query(Alert).filter(Alert.target_role == "gm", Alert.is_read.is_(False)).count()
+
+    error = request.session.pop("detail_error", None)
+    success_msg = request.session.pop("detail_success", None)
+
+    return templates.TemplateResponse("staff/enquiry_detail.html", {
+        "request": request,
+        "current_user": current_user,
+        "active_tab": "enquiries",
+        "csrf_token": get_staff_csrf_token(request),
+        "enquiry": enquiry,
+        "waiting_mins": w_mins,
+        "is_overdue": (overdue and enquiry.status in ("new", "drafted")),
+        "gm_unread_alerts": gm_unread,
+        "error": error,
+        "success_msg": success_msg
+    })
+
+
+@router.post("/enquiries/{enquiry_id}/reroute")
+def post_reroute_enquiry(
+    request: Request,
+    enquiry_id: str,
+    new_category: str = Form(...),
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """One-click re-route. Only a role that can see the enquiry may re-route it."""
+    verify_staff_csrf(request, csrf_token)
+    enquiry = db.get(Enquiry, enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+
+    # Visibility check
+    if current_user.role == "sales" and enquiry.category not in ("wedding", "offsite"):
+        raise HTTPException(status_code=403, detail="Cannot re-route enquiry outside your visible scope")
+    if current_user.role == "reservations" and enquiry.category != "room":
+        raise HTTPException(status_code=403, detail="Cannot re-route enquiry outside your visible scope")
+
+    ok, err = reroute_enquiry(db, enquiry, new_category, current_user)
+    if not ok:
+        request.session["detail_error"] = err
+    else:
+        request.session["detail_success"] = f"Enquiry re-routed to {new_category} successfully."
+        log_audit_event(
+            db=db,
+            user=current_user,
+            action="enquiry_rerouted",
+            entity_type="enquiry",
+            entity_id=enquiry.id,
+            details=f"Re-routed to {new_category}"
+        )
+    db.commit()
+    return RedirectResponse(f"/staff/enquiries/{enquiry_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/enquiries/{enquiry_id}/draft")
+def post_save_draft(
+    request: Request,
+    enquiry_id: str,
+    draft_reply: str = Form(...),
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Saves updated draft text with price guard validation."""
+    verify_staff_csrf(request, csrf_token)
+    enquiry = db.get(Enquiry, enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+
+    ok, err = save_enquiry_draft(db, enquiry, draft_reply, current_user)
+    if not ok:
+        request.session["detail_error"] = err
+    else:
+        request.session["detail_success"] = "Draft response updated successfully."
+    db.commit()
+    return RedirectResponse(f"/staff/enquiries/{enquiry_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/enquiries/{enquiry_id}/send")
+def post_send_enquiry(
+    request: Request,
+    enquiry_id: str,
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Simulated send action. Idempotent; verifies price defense guard."""
+    verify_staff_csrf(request, csrf_token)
+    enquiry = db.get(Enquiry, enquiry_id)
+    if not enquiry:
+        raise HTTPException(status_code=404, detail="Enquiry not found")
+
+    ok, err = send_enquiry_reply(db, enquiry, enquiry.draft_reply or "", current_user)
+    if not ok:
+        request.session["detail_error"] = err
+    else:
+        request.session["detail_success"] = "Reply sent (simulated). First reply timestamp recorded."
+        log_audit_event(
+            db=db,
+            user=current_user,
+            action="enquiry_reply_sent",
+            entity_type="enquiry",
+            entity_id=enquiry.id,
+            details="Reply simulated and first_replied_at recorded."
+        )
+    db.commit()
+    return RedirectResponse(f"/staff/enquiries/{enquiry_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/alerts/{alert_id}/dismiss")
+def post_dismiss_alert(
+    request: Request,
+    alert_id: int,
+    csrf_token: str = Form(...),
+    current_user: User = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Dismisses an active GM alert."""
+    verify_staff_csrf(request, csrf_token)
+    if current_user.role != "gm":
+        raise HTTPException(status_code=403, detail="Only GM can dismiss alerts")
+
+    alert = db.get(Alert, alert_id)
+    if alert:
+        alert.is_read = True
+        db.commit()
+    return RedirectResponse("/staff/enquiries", status_code=status.HTTP_303_SEE_OTHER)
