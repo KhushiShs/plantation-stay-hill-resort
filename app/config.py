@@ -1,10 +1,25 @@
 """Application configuration module."""
 import os
 import secrets
+from typing import List
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
 
 APP_NAME = "Plantation Stay"
+
+
+def normalize_database_url(url: str) -> str:
+    """
+    Ensure the PostgreSQL connection URL uses the psycopg (psycopg3) SQLAlchemy driver.
+    Converts postgresql:// and postgres:// to postgresql+psycopg://.
+    """
+    if not url:
+        return url
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://"):]
+    if url.startswith("postgresql://") and not url.startswith("postgresql+"):
+        return "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
 
 
 class Settings(BaseSettings):
@@ -20,6 +35,10 @@ class Settings(BaseSettings):
     secret_key: str = os.getenv("SECRET_KEY", "")
     webhook_secret: str = os.getenv("WEBHOOK_SECRET", "")
     
+    # Allowed hosts for TrustedHostMiddleware
+    # Comma-separated or default list
+    allowed_hosts_raw: str = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1,testserver,*.onrender.com")
+
     anthropic_api_key: str = os.getenv("ANTHROPIC_API_KEY", "")
     anthropic_model: str = os.getenv("ANTHROPIC_MODEL", "")  # Empty uses fallback
     hold_minutes: int = int(os.getenv("HOLD_MINUTES", "10"))
@@ -30,8 +49,18 @@ class Settings(BaseSettings):
         """Alias for backwards compatibility with middleware checks."""
         return self.app_env
 
+    @property
+    def allowed_hosts(self) -> List[str]:
+        """Parsed list of allowed hosts."""
+        if not self.allowed_hosts_raw:
+            return ["localhost", "127.0.0.1", "testserver", "*.onrender.com"]
+        return [h.strip() for h in self.allowed_hosts_raw.split(",") if h.strip()]
+
     @model_validator(mode="after")
-    def validate_secrets_and_env(self):
+    def validate_and_normalize(self):
+        # Normalize database_url to postgresql+psycopg://
+        self.database_url = normalize_database_url(self.database_url)
+
         # Validate APP_ENV
         if self.app_env not in ("development", "production"):
             self.app_env = "production"

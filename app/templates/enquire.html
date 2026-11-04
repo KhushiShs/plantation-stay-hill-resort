@@ -67,18 +67,52 @@
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
         <div>
-          <label for="preferred_check_in" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Check-in (Optional)</label>
+          <label for="event_type" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Event / Enquiry Type</label>
+          <select id="event_type" name="event_type" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);">
+            <option value="Wedding" {% if form_data and form_data.event_type == 'Wedding' %}selected{% endif %}>Destination Wedding</option>
+            <option value="Corporate Offsite" {% if form_data and form_data.event_type == 'Corporate Offsite' %}selected{% endif %}>Corporate Offsite / Conference</option>
+            <option value="Family Gathering" {% if form_data and form_data.event_type == 'Family Gathering' %}selected{% endif %}>Family Gathering / Reunion</option>
+            <option value="Room Booking" {% if form_data and form_data.event_type == 'Room Booking' %}selected{% endif %}>Room &amp; Villa Stays</option>
+            <option value="General Enquiry" {% if form_data and form_data.event_type == 'General Enquiry' %}selected{% endif %}>General Enquiry</option>
+          </select>
+        </div>
+        <div>
+          <label for="preferred_venue" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Venue Preference</label>
+          <select id="preferred_venue" name="preferred_venue" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);">
+            <option value="Lawn" {% if form_data and form_data.preferred_venue == 'Lawn' %}selected{% endif %}>Estate Lawns &amp; Gazebo</option>
+            <option value="Conference Hall" {% if form_data and form_data.preferred_venue == 'Conference Hall' %}selected{% endif %}>Coffee Bean Conference Hall</option>
+            <option value="Both Lawn and Hall" {% if form_data and form_data.preferred_venue == 'Both Lawn and Hall' %}selected{% endif %}>Both Lawns and Conference Hall</option>
+            <option value="Villas / Rooms Only" {% if form_data and form_data.preferred_venue == 'Villas / Rooms Only' %}selected{% endif %}>Villas / Rooms Only</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label for="preferred_check_in" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Target Date / Check-in</label>
           <input type="date" id="preferred_check_in" name="preferred_check_in" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);" value="{{ form_data.preferred_check_in if form_data else '' }}">
         </div>
         <div>
-          <label for="preferred_check_out" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Check-out (Optional)</label>
+          <label for="preferred_check_out" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Check-out / End Date</label>
           <input type="date" id="preferred_check_out" name="preferred_check_out" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);" value="{{ form_data.preferred_check_out if form_data else '' }}">
         </div>
       </div>
 
-      <div style="margin-bottom: 16px;">
-        <label for="preferred_guests" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Number of Guests / Attendees (Optional)</label>
-        <input type="number" id="preferred_guests" name="preferred_guests" min="1" max="1000" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);" value="{{ form_data.preferred_guests if form_data else '' }}">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <div>
+          <label for="preferred_guests" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Estimated Guests / Attendees</label>
+          <input type="number" id="preferred_guests" name="preferred_guests" min="1" max="1500" placeholder="e.g. 150" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);" value="{{ form_data.preferred_guests if form_data else '' }}">
+        </div>
+        <div>
+          <label for="budget_range" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Budget Range</label>
+          <select id="budget_range" name="budget_range" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);">
+            <option value="Under ₹3 Lakhs" {% if form_data and form_data.budget_range == 'Under ₹3 Lakhs' %}selected{% endif %}>Under ₹3 Lakhs</option>
+            <option value="₹3 - ₹7 Lakhs" {% if form_data and form_data.budget_range == '₹3 - ₹7 Lakhs' %}selected{% endif %}>₹3 - ₹7 Lakhs</option>
+            <option value="₹7 - ₹15 Lakhs" {% if form_data and form_data.budget_range == '₹7 - ₹15 Lakhs' %}selected{% endif %}>₹7 - ₹15 Lakhs</option>
+            <option value="₹15 Lakhs+" {% if form_data and form_data.budget_range == '₹15 Lakhs+' %}selected{% endif %}>₹15 Lakhs+</option>
+            <option value="Flexible / To be discussed" {% if form_data and form_data.budget_range == 'Flexible / To be discussed' %}selected{% endif %}>Flexible / To be discussed</option>
+          </select>
+        </div>
       </div>
 
       <div style="margin-bottom: 16px;">
@@ -99,17 +133,7 @@
   </div>
 </div>
 
-<script>
-  // Disable submit button on submit to prevent double posts
-  const form = document.getElementById('enquiry-form');
-  if (form) {
-    form.addEventListener('submit', function() {
-      const btn = document.getElementById('submit-btn');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerText = 'Submitting...';
-      }
-    });
-  }
-</script>
+{% block scripts %}
+<script src="/static/js/enquire.js" defer></script>
+{% endblock %}
 {% endblock %}

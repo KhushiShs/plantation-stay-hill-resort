@@ -16,7 +16,7 @@
       </div>
       <div style="text-align: right;">
         <span class="label-caps">HOLD EXPIRES IN</span><br>
-        <strong id="timer-display" class="tabular" style="font-size: 1.15rem; color: var(--color-accent);">{{ minutes_left }}:{{ "%02d" % seconds_left }}</strong>
+        <strong id="timer-display" class="tabular" data-remaining-seconds="{{ remaining_seconds }}" data-initial-seconds="{{ hold_minutes * 60 }}" style="font-size: 1.15rem; color: var(--color-accent);">{{ minutes_left }}:{{ "%02d" % seconds_left }}</strong>
       </div>
     </div>
 
@@ -108,26 +108,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-  let totalSeconds = {{ remaining_seconds }};
-  const initialSeconds = {{ hold_minutes * 60 }};
-  const timerDisplay = document.getElementById('timer-display');
-  const progressBar = document.getElementById('hold-progress');
-
-  const interval = setInterval(() => {
-    if (totalSeconds <= 0) {
-      clearInterval(interval);
-      timerDisplay.innerText = "0:00";
-      progressBar.style.width = "0%";
-      window.location.reload();
-      return;
-    }
-    totalSeconds--;
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    timerDisplay.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-    const pct = Math.max(0, (totalSeconds / initialSeconds) * 100);
-    progressBar.style.width = pct + "%";
-  }, 1000);
-</script>
+<script src="/static/js/hold-timer.js" defer></script>
 {% endblock %}

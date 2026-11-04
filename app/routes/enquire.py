@@ -57,6 +57,9 @@ def post_enquiry(
     sender_name: str = Form(...),
     sender_contact: str = Form(...),
     raw_message: str = Form(...),
+    event_type: Optional[str] = Form(None),
+    preferred_venue: Optional[str] = Form(None),
+    budget_range: Optional[str] = Form(None),
     preferred_check_in: Optional[str] = Form(None),
     preferred_check_out: Optional[str] = Form(None),
     preferred_guests: Optional[str] = Form(None),
@@ -87,6 +90,9 @@ def post_enquiry(
         "sender_name": sender_name,
         "sender_contact": sender_contact,
         "raw_message": raw_message,
+        "event_type": event_type,
+        "preferred_venue": preferred_venue,
+        "budget_range": budget_range,
         "preferred_check_in": preferred_check_in,
         "preferred_check_out": preferred_check_out,
         "preferred_guests": preferred_guests
@@ -171,10 +177,23 @@ def post_enquiry(
         except ValueError:
             pass
 
+    # Build enriched message incorporating structured wedding/event selections
+    details_prefix = []
+    if event_type:
+        details_prefix.append(f"Event Type: {event_type}")
+    if preferred_venue:
+        details_prefix.append(f"Venue Preference: {preferred_venue}")
+    if budget_range:
+        details_prefix.append(f"Budget Range: {budget_range}")
+
+    final_raw_message = trimmed_message
+    if details_prefix:
+        final_raw_message = "[" + " | ".join(details_prefix) + "]\n" + trimmed_message
+
     # Process through pipeline
     enquiry = process_new_enquiry(
         db=db,
-        raw_message=trimmed_message,
+        raw_message=final_raw_message,
         sender_name=sender_name.strip(),
         sender_contact=contact_val,
         channel="web_form",

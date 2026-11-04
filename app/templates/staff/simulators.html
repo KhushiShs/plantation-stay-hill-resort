@@ -87,28 +87,7 @@
   </div>
 </div>
 
-<script>
-  function showTab(type) {
-    const pEmail = document.getElementById('panel-email');
-    const pWa = document.getElementById('panel-whatsapp');
-    const bEmail = document.getElementById('btn-tab-email');
-    const bWa = document.getElementById('btn-tab-whatsapp');
-
-    if (type === 'email') {
-      pEmail.style.display = 'block';
-      pWa.style.display = 'none';
-      bEmail.style.background = '#EFE9DC';
-      bEmail.style.fontWeight = '600';
-      bWa.style.background = 'transparent';
-      bWa.style.fontWeight = 'normal';
-    } else {
-      pEmail.style.display = 'none';
-      pWa.style.display = 'block';
-      bWa.style.background = '#EFE9DC';
-      bWa.style.fontWeight = '600';
-      bEmail.style.background = 'transparent';
-      bEmail.style.fontWeight = 'normal';
-    }
-  }
-</script>
+{% block scripts %}
+<script src="/static/js/simulators.js" defer></script>
+{% endblock %}
 {% endblock %}
