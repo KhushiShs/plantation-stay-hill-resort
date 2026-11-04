@@ -67,8 +67,36 @@ def test_room_calendar_markup_week_grid_and_sold_out_disabled(client, db_session
     assert 'sold-out' in tag_html
     assert 'data-sold-out="true"' in tag_html
 
+    # Count of rendered date buttons (at least 30 buttons present)
+    date_buttons = re.findall(r'<button[^>]+data-date="(\d{4}-\d{2}-\d{2})"[^>]*>', res.text)
+    assert len(date_buttons) >= 30, f"Expected at least 30 date buttons, got {len(date_buttons)}"
+
     # 5. External JS included
     assert 'src="/static/room-calendar.js"' in res.text
+
+
+def test_room_page_regression_returns_200_with_calendar_grid_present(client, db_session):
+    """
+    Regression test asserting:
+    - GET /rooms/estate-room returns 200 OK
+    - Calendar grid container exists with month headers and day buttons
+    - No script errors / missing static files
+    """
+    res = client.get("/rooms/estate-room")
+    assert res.status_code == 200
+    assert 'id="tariff-calendar"' in res.text
+    assert '<div class="calendar-grid">' in res.text
+    assert 'data-date=' in res.text
+    assert 'data-available=' in res.text
+    assert 'Clear dates' in res.text
+    assert 'src="/static/room-calendar.js"' in res.text
+    
+    # Also test luxury villa
+    res_villa = client.get("/rooms/luxury-villa")
+    assert res_villa.status_code == 200
+    assert 'id="tariff-calendar"' in res_villa.text
+    assert '<div class="calendar-grid">' in res_villa.text
+    assert 'data-date=' in res_villa.text
 
 
 def test_quote_endpoint_updates_with_calendar_selected_dates(client, db_session):
