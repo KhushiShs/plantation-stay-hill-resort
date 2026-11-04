@@ -24,11 +24,17 @@ This document details the local setup, cloud deployment on Render + Neon Postgre
    source .venv/bin/activate  # Or .venv\Scripts\activate on Windows
    pip install -r requirements.txt
    ```
-3. Initialize and seed the database schema:
+3. Set the three staff password variables in your `.env` (or shell) to any passwords you choose (minimum 12 characters each):
+   ```env
+   DEMO_RESERVATIONS_PASSWORD=YourPasswordChoice123!
+   DEMO_GM_PASSWORD=YourPasswordChoice123!
+   DEMO_SALES_PASSWORD=YourPasswordChoice123!
+   ```
+4. Initialize and seed the database schema:
    ```bash
    python scripts/init_db.py
    ```
-4. Start the development server:
+5. Start the development server:
    ```bash
    uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
    ```
@@ -42,11 +48,12 @@ This document details the local setup, cloud deployment on Render + Neon Postgre
    ```env
    DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_stay
    ```
-3. Run schema initialization:
+3. Set `DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, and `DEMO_SALES_PASSWORD` in `.env` to any passwords of your choice (minimum 12 characters each).
+4. Run schema initialization:
    ```bash
    python scripts/init_db.py
    ```
-4. Launch the application:
+5. Launch the application:
    ```bash
    uvicorn app.main:app --host 127.0.0.1 --port 8000
    ```
@@ -111,16 +118,19 @@ Render free/starter web services spin down after 15 minutes of inactivity.
 Staff portal URL: `/staff/login`
 
 ### Local Development Logins
-When running locally (`APP_ENV=development`):
+Set the three staff password environment variables to any passwords of your choice (minimum 12 characters each) in your `.env` file before running the seed script:
+- `DEMO_RESERVATIONS_PASSWORD`
+- `DEMO_GM_PASSWORD`
+- `DEMO_SALES_PASSWORD`
 
 | Role | Username / Email | Password | Access Rights |
 | :--- | :--- | :--- | :--- |
-| **General Manager** | `gm@plantationstay.local` | `GMDemo2026!` | Full access: Rate calendar, allotments, blackouts, promos, bookings CSV export, enquiry inbox (all lanes including Unsorted and Complaints), refund processing, audit ledger. |
-| **Reservations Staff** | `reservations@plantationstay.local` | `ReservationsDemo2026!` | Daily allotments, room rates, bookings ledger, CSV export, room reservation enquiry routing. |
-| **Sales & Events** | `sales@plantationstay.local` | `SalesDemo2026!` | Event and wedding enquiry lane, quotation drafts. |
+| **General Manager** | `gm@plantationstay.local` | Set via `DEMO_GM_PASSWORD` | Full access: Rate calendar, allotments, blackouts, promos, bookings CSV export, enquiry inbox (all lanes including Unsorted and Complaints), refund processing, audit ledger. |
+| **Reservations Staff** | `reservations@plantationstay.local` | Set via `DEMO_RESERVATIONS_PASSWORD` | Daily allotments, room rates, bookings ledger, CSV export, room reservation enquiry routing. |
+| **Sales & Events** | `sales@plantationstay.local` | Set via `DEMO_SALES_PASSWORD` | Event and wedding enquiry lane, quotation drafts. |
 
 ### Production / Live Site Logins
-Because the repository is public, live logins are provided separately in the submission. Production seeding requires `DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, and `DEMO_SALES_PASSWORD` (minimum 12 characters each) set in the hosting environment variables. No live passwords appear in this repository.
+Because the repository is public, live logins are provided separately in the submission. Production seeding requires `DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, and `DEMO_SALES_PASSWORD` (minimum 12 characters each) set in the hosting environment variables. No default or fallback passwords exist in this repository.
 
 ---
 

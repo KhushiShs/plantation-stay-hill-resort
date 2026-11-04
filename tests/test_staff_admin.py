@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 import re
+import os
 
 from app.main import app
 from app.db import get_db
@@ -24,8 +25,17 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 
-def staff_login(client, email, password):
+def staff_login(client, email, password=None):
     """Perform login through the staff login endpoint."""
+    if password is None:
+        if "reservations" in email:
+            password = os.environ["DEMO_RESERVATIONS_PASSWORD"]
+        elif "sales" in email:
+            password = os.environ["DEMO_SALES_PASSWORD"]
+        elif "gm" in email:
+            password = os.environ["DEMO_GM_PASSWORD"]
+        else:
+            password = os.environ.get("DEMO_RESERVATIONS_PASSWORD", "")
     res_login_page = client.get("/staff/login")
     m = re.search(r'name="csrf_token"\s+value="([^"]+)"', res_login_page.text)
     csrf = m.group(1)
@@ -62,7 +72,7 @@ def test_login_rejects_external_next_url(client):
 
     res = client.post("/staff/login", data={
         "email": "reservations@plantationstay.local",
-        "password": "ReservationsDemo2026!",
+        "password": os.environ["DEMO_RESERVATIONS_PASSWORD"],
         "csrf_token": csrf,
         "next": "https://evil.com"
     }, follow_redirects=False)
@@ -73,7 +83,7 @@ def test_login_rejects_external_next_url(client):
 
 def test_sales_role_forbidden_on_rate_and_promos(client):
     """Sales role gets 403 Forbidden on rate, promo, and booking admin."""
-    staff_login(client, "sales@plantationstay.local", "SalesDemo2026!")
+    staff_login(client, "sales@plantationstay.local")
 
     # Attempt to view calendar
     res_cal = client.get("/staff/calendar")
@@ -91,14 +101,14 @@ def test_sales_role_forbidden_on_rate_and_promos(client):
 def test_gm_can_view_audit_log_reservations_cannot(client):
     """Audit log is visible to GM only."""
     # 1. Reservations user
-    staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    staff_login(client, "reservations@plantationstay.local")
     res_res = client.get("/staff/calendar")
     assert res_res.status_code == 200
     assert "GM Audit Log" not in res_res.text
 
     # 2. GM user
     client.cookies.clear()
-    staff_login(client, "gm@plantationstay.local", "GMDemo2026!")
+    staff_login(client, "gm@plantationstay.local")
     res_gm = client.get("/staff/calendar")
     assert res_gm.status_code == 200
     assert "GM Audit Log" in res_gm.text
@@ -109,7 +119,7 @@ def test_gm_can_view_audit_log_reservations_cannot(client):
 # -----------------------------------------------------------------------------
 def test_single_date_rate_and_allotment_update(client, db_session):
     """Single date rate update converts rupees to paise and saves correctly."""
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
     target_d = date.today() + timedelta(days=5)
 
     res = client.post("/staff/calendar/single-update", data={
@@ -136,7 +146,7 @@ def test_single_date_rate_and_allotment_update(client, db_session):
 
 def test_lowering_allotment_below_sold_plus_held_rejected_friendly(client, db_session):
     """If staff set total below sold + held, reject with friendly error without raising DB 500 error."""
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
     target_d = date.today() + timedelta(days=7)
 
     # Setup 4 sold, 1 held on that date
@@ -167,7 +177,7 @@ def test_lowering_allotment_below_sold_plus_held_rejected_friendly(client, db_se
 
 def test_batch_range_update_with_weekday_weekend_pattern(client, db_session):
     """Batch range updates weekday vs weekend rates across range in a single transaction."""
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
     start_d = date.today() + timedelta(days=10)
     end_d = start_d + timedelta(days=6)
 
@@ -198,7 +208,7 @@ def test_batch_range_update_with_weekday_weekend_pattern(client, db_session):
 
 def test_batch_update_rejects_if_any_night_exceeds_capacity(client, db_session):
     """If any single night in a batch would fall below sold+held, reject entire transaction."""
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
     start_d = date.today() + timedelta(days=20)
     end_d = start_d + timedelta(days=4)
 
@@ -260,7 +270,7 @@ def test_blackout_blocks_new_holds_but_honors_existing_confirmed(client, db_sess
     db_session.commit()
 
     # Staff toggles blackout
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
     res = client.post("/staff/calendar/toggle-blackout", data={
         "csrf_token": csrf,
         "room_type_id": "estate-room",
@@ -322,7 +332,7 @@ def test_rate_edit_does_not_alter_existing_booking_snapshots(client, db_session)
     db_session.commit()
 
     # Staff changes daily rate for target_d to Rs 12,000 (1200000 paise)
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
     client.post("/staff/calendar/single-update", data={
         "csrf_token": csrf,
         "room_type_id": "estate-room",
@@ -341,7 +351,7 @@ def test_rate_edit_does_not_alter_existing_booking_snapshots(client, db_session)
 # -----------------------------------------------------------------------------
 def test_create_and_toggle_promo_code(client, db_session):
     """Staff can create promo in percentage and toggle active/inactive."""
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
 
     # Create 15.5% promo
     res = client.post("/staff/promos/save", data={
@@ -405,7 +415,7 @@ def test_mark_payment_refunded_idempotent(client, db_session):
     db_session.add(payment)
     db_session.commit()
 
-    _, csrf = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, csrf = staff_login(client, "reservations@plantationstay.local")
 
     # 1. First execution
     res1 = client.post("/staff/bookings/mark-refunded", data={
@@ -454,7 +464,7 @@ def test_csv_export_escapes_formula_cells(client, db_session):
     db_session.add(b)
     db_session.commit()
 
-    _, _ = staff_login(client, "reservations@plantationstay.local", "ReservationsDemo2026!")
+    _, _ = staff_login(client, "reservations@plantationstay.local")
     res = client.get(f"/staff/bookings/export-csv?date_str={target_d.isoformat()}")
     assert res.status_code == 200
     assert res.headers["content-type"] == "text/csv; charset=utf-8"

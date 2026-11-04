@@ -167,12 +167,12 @@ Originals live in `img_source/`. `scripts/make_images.py` reads them and writes 
 - Note: placeholder photo, not of the actual resort
 - Average colour placeholder: `#5c3825`
 
-## 11. Staff Roles & Demo Users
-- Local development accounts (seeded automatically when `APP_ENV=development`):
-  - `reservations`: `reservations@plantationstay.local` / `ReservationsDemo2026!`
-  - `gm`: `gm@plantationstay.local` / `GMDemo2026!`
-  - `sales`: `sales@plantationstay.local` / `SalesDemo2026!`
-- **Security Note**: These default credentials are for local development only. For production deployments (`APP_ENV=production`), live credentials differ and are supplied via environment variables (`DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, `DEMO_SALES_PASSWORD` >= 12 chars). Live passwords are never stored in or printed to the repository, and are provided separately in the submission.
+## 11. Staff Roles & Accounts
+- Demo staff accounts:
+  - `reservations`: `reservations@plantationstay.local`
+  - `gm`: `gm@plantationstay.local`
+  - `sales`: `sales@plantationstay.local`
+- **Security Policy**: No default or fallback passwords exist in the codebase. In all environments, passwords must be supplied via environment variables (`DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, `DEMO_SALES_PASSWORD` >= 12 chars). For local setup, developers set these to any passwords they choose. For live deployment, credentials differ and are provided separately in the submission. Live passwords are never stored in or printed to the repository.
 
 ## 12. Test Safety
 - All test suites abort execution immediately unless database name ends with `_test`.

@@ -1,4 +1,5 @@
 """Tests for Phase 4: Enquiry intake, AI Router, Fallback Classifier, Price Defense Guard, RBAC, SLA."""
+import os
 import json
 import pytest
 from datetime import datetime, date, time, timedelta, timezone
@@ -371,7 +372,7 @@ def test_role_based_inbox_and_detail_permissions():
     csrf_token_login = re.search(r'name="csrf_token"\s+value="([^"]+)"', login_get.text).group(1)
     resp_login = client.post(
         "/staff/login",
-        data={"email": "sales@plantationstay.local", "password": "SalesDemo2026!", "csrf_token": csrf_token_login},
+        data={"email": "sales@plantationstay.local", "password": os.environ["DEMO_SALES_PASSWORD"], "csrf_token": csrf_token_login},
         follow_redirects=False
     )
     assert resp_login.status_code == 303
@@ -393,7 +394,7 @@ def test_role_based_inbox_and_detail_permissions():
     csrf_token_login2 = re.search(r'name="csrf_token"\s+value="([^"]+)"', login_get2.text).group(1)
     resp_login2 = client.post(
         "/staff/login",
-        data={"email": "reservations@plantationstay.local", "password": "ReservationsDemo2026!", "csrf_token": csrf_token_login2},
+        data={"email": "reservations@plantationstay.local", "password": os.environ["DEMO_RESERVATIONS_PASSWORD"], "csrf_token": csrf_token_login2},
         follow_redirects=False
     )
     assert resp_login2.status_code == 303
@@ -610,7 +611,7 @@ def test_gm_median_reply_calculation():
     csrf_token_login = re.search(r'name="csrf_token"\s+value="([^"]+)"', login_get.text).group(1)
     login_resp = client.post(
         "/staff/login",
-        data={"email": "gm@plantationstay.local", "password": "GMDemo2026!", "csrf_token": csrf_token_login},
+        data={"email": "gm@plantationstay.local", "password": os.environ["DEMO_GM_PASSWORD"], "csrf_token": csrf_token_login},
         follow_redirects=False
     )
     assert login_resp.status_code == 303

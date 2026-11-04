@@ -1,12 +1,18 @@
 """Fixtures and test setup. Aborts if DB name does not end in _test."""
 import os
+import secrets
 
 # Ensure tests run under development mode so https_only is False for test client sessions
 os.environ.setdefault("APP_ENV", "development")
-# Ensure tests use default local demo credentials when seeding
-os.environ.setdefault("DEMO_RESERVATIONS_PASSWORD", "ReservationsDemo2026!")
-os.environ.setdefault("DEMO_GM_PASSWORD", "GMDemo2026!")
-os.environ.setdefault("DEMO_SALES_PASSWORD", "SalesDemo2026!")
+
+# Generate strong, random test-only passwords for each test run
+TEST_RESERVATIONS_PASSWORD = f"TestRes_{secrets.token_urlsafe(16)}"
+TEST_GM_PASSWORD = f"TestGM_{secrets.token_urlsafe(16)}"
+TEST_SALES_PASSWORD = f"TestSales_{secrets.token_urlsafe(16)}"
+
+os.environ["DEMO_RESERVATIONS_PASSWORD"] = TEST_RESERVATIONS_PASSWORD
+os.environ["DEMO_GM_PASSWORD"] = TEST_GM_PASSWORD
+os.environ["DEMO_SALES_PASSWORD"] = TEST_SALES_PASSWORD
 
 import pytest
 from sqlalchemy import create_engine, text

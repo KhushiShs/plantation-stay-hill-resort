@@ -10,45 +10,31 @@ from app.models import (
 )
 from app.security import hash_password
 
-# Default demo passwords for local development only
-DEFAULT_LOCAL_RESERVATIONS_PWD = "ReservationsDemo2026!"
-DEFAULT_LOCAL_GM_PWD = "GMDemo2026!"
-DEFAULT_LOCAL_SALES_PWD = "SalesDemo2026!"
-
-
 def get_staff_seed_passwords() -> dict:
     """
-    Resolve staff credentials safely based on APP_ENV:
-    - In development (or test): fallback to local demo passwords if unset.
-    - In production: DEMO_RESERVATIONS_PASSWORD, DEMO_GM_PASSWORD, and DEMO_SALES_PASSWORD
-      MUST be explicitly configured and at least 12 characters long. Aborts with error if missing.
+    Resolve staff credentials strictly from environment variables:
+    DEMO_RESERVATIONS_PASSWORD, DEMO_GM_PASSWORD, and DEMO_SALES_PASSWORD
+    MUST be explicitly configured and at least 12 characters long in all environments.
+    No fallback passwords exist in the codebase.
     """
-    app_env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).lower()
-
     res_pwd = os.getenv("DEMO_RESERVATIONS_PASSWORD")
     gm_pwd = os.getenv("DEMO_GM_PASSWORD")
     sales_pwd = os.getenv("DEMO_SALES_PASSWORD")
 
-    if app_env == "production":
-        missing_or_short = []
-        if not res_pwd or len(res_pwd) < 12:
-            missing_or_short.append("DEMO_RESERVATIONS_PASSWORD (missing or < 12 chars)")
-        if not gm_pwd or len(gm_pwd) < 12:
-            missing_or_short.append("DEMO_GM_PASSWORD (missing or < 12 chars)")
-        if not sales_pwd or len(sales_pwd) < 12:
-            missing_or_short.append("DEMO_SALES_PASSWORD (missing or < 12 chars)")
+    missing_or_short = []
+    if not res_pwd or len(res_pwd) < 12:
+        missing_or_short.append("DEMO_RESERVATIONS_PASSWORD (missing or < 12 chars)")
+    if not gm_pwd or len(gm_pwd) < 12:
+        missing_or_short.append("DEMO_GM_PASSWORD (missing or < 12 chars)")
+    if not sales_pwd or len(sales_pwd) < 12:
+        missing_or_short.append("DEMO_SALES_PASSWORD (missing or < 12 chars)")
 
-        if missing_or_short:
-            raise ValueError(
-                "Production database seeding aborted: The following staff password environment "
-                f"variables are required and must be at least 12 characters: {', '.join(missing_or_short)}. "
-                "Set DEMO_RESERVATIONS_PASSWORD, DEMO_GM_PASSWORD, and DEMO_SALES_PASSWORD before seeding production."
-            )
-    else:
-        # Development fallback
-        res_pwd = res_pwd or DEFAULT_LOCAL_RESERVATIONS_PWD
-        gm_pwd = gm_pwd or DEFAULT_LOCAL_GM_PWD
-        sales_pwd = sales_pwd or DEFAULT_LOCAL_SALES_PWD
+    if missing_or_short:
+        raise ValueError(
+            "Database seeding aborted: The following staff password environment "
+            f"variables are required and must be at least 12 characters: {', '.join(missing_or_short)}. "
+            "Please set DEMO_RESERVATIONS_PASSWORD, DEMO_GM_PASSWORD, and DEMO_SALES_PASSWORD in your environment before seeding."
+        )
 
     return {
         "reservations": res_pwd,

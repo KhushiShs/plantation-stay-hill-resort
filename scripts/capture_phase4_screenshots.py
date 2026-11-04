@@ -29,7 +29,7 @@ with sync_playwright() as p:
     t_page.goto(f"{BASE_URL}/staff/login")
     t_page.wait_for_load_state("networkidle")
     t_page.fill('input[name="email"]', "gm@plantationstay.local")
-    t_page.fill('input[name="password"]', "GMDemo2026!")
+    t_page.fill('input[name="password"]', "os.environ[DEMO_GM_PASSWORD]")
     t_page.click('button[type="submit"]')
     t_page.wait_for_load_state("networkidle")
 
@@ -67,7 +67,7 @@ with sync_playwright() as p:
     m_page.goto(f"{BASE_URL}/staff/login")
     m_page.wait_for_load_state("networkidle")
     m_page.fill('input[name="email"]', "gm@plantationstay.local")
-    m_page.fill('input[name="password"]', "GMDemo2026!")
+    m_page.fill('input[name="password"]', "os.environ[DEMO_GM_PASSWORD]")
     m_page.click('button[type="submit"]')
     m_page.wait_for_load_state("networkidle")
 

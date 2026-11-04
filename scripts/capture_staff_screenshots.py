@@ -21,7 +21,7 @@ with sync_playwright() as p:
     page.goto(f"{BASE_URL}/staff/login")
     page.wait_for_load_state("networkidle")
     page.fill('input[name="email"]', "gm@plantationstay.local")
-    page.fill('input[name="password"]', "GMDemo2026!")
+    page.fill('input[name="password"]', "os.environ[DEMO_GM_PASSWORD]")
     page.click('button[type="submit"]')
     page.wait_for_load_state("networkidle")
 
