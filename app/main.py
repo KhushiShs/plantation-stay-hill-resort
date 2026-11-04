@@ -3,7 +3,10 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from starlette.middleware.sessions import SessionMiddleware
+import logging
 from app.config import settings
+
+logger = logging.getLogger("app.main")
 from app.routes.guest import router as guest_router, templates
 from app.routes.staff import router as staff_router
 from app.routes.enquire import router as enquire_router
@@ -38,7 +41,14 @@ async def custom_404_handler(request: Request, exc):
 
 
 @app.exception_handler(500)
-async def custom_500_handler(request: Request, exc):
+async def custom_500_handler(request: Request, exc: Exception):
+    logger.error(
+        "Internal server error (500) at %s %s: %s",
+        request.method,
+        request.url.path,
+        exc,
+        exc_info=True
+    )
     return templates.TemplateResponse(request, "errors/500.html", {
         "app_name": settings.app_name
     }, status_code=500)
