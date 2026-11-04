@@ -407,6 +407,18 @@ h1, h2, h3, h4 {
   padding: var(--space-1) 0;
 }
 
+/* Calendar Status Line */
+.cal-status-line {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-ink);
+  background-color: var(--color-paper-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
 /* Month navigation buttons */
 .cal-nav-bar {
   display: flex;
@@ -498,33 +510,46 @@ h1, h2, h3, h4 {
   cursor: default;
 }
 
-/* Selected Check-in, Check-out and range highlights */
-.cal-cell.cal-selected-in {
+.cal-cell.is-dimmed {
+  opacity: 0.45;
+}
+
+/* Selected Check-in (.is-start), Check-out (.is-end) and range (.in-range) highlights */
+.cal-cell.is-start,
+.cal-cell.is-end {
   background-color: var(--color-accent) !important;
-  color: #FFFFFF !important;
+  color: var(--color-paper) !important;
   border-color: var(--color-accent) !important;
   font-weight: 700;
 }
 
-.cal-cell.cal-selected-in .cal-price, .cal-cell.cal-selected-in .scarcity-badge {
-  color: #FFFFFF !important;
+.cal-cell.is-start .cal-price,
+.cal-cell.is-start .scarcity-badge,
+.cal-cell.is-start .cal-date,
+.cal-cell.is-end .cal-price,
+.cal-cell.is-end .scarcity-badge,
+.cal-cell.is-end .cal-date {
+  color: var(--color-paper) !important;
 }
 
-.cal-cell.cal-selected-out {
-  background-color: var(--color-accent) !important;
-  color: #FFFFFF !important;
-  border-color: var(--color-accent) !important;
+.cal-badge-tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   font-weight: 700;
+  line-height: 1;
+  margin-top: var(--space-1);
 }
 
-.cal-cell.cal-selected-out .cal-price, .cal-cell.cal-selected-out .scarcity-badge {
-  color: #FFFFFF !important;
+.cal-cell.is-start .cal-badge-tag,
+.cal-cell.is-end .cal-badge-tag {
+  color: var(--color-paper) !important;
 }
 
-.cal-cell.in-range, .cal-cell.cal-in-range {
+.cal-cell.in-range {
   background-color: var(--color-paper-dark) !important;
   border-color: var(--color-accent);
-  border-radius: 0;
+  border-radius: var(--radius-none);
 }
 
 .cal-date {

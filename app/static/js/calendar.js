@@ -1,4 +1,4 @@
-/* calendar.js - Interactive tariff calendar date picker with month navigation */
+/* calendar.js - Interactive tariff calendar date picker with month navigation & clear selection states */
 (function() {
   'use strict';
 
@@ -8,6 +8,7 @@
     const checkOutInput = document.getElementById('check_out');
     const quoteForm = document.getElementById('quote-form');
     const calendarMsg = document.getElementById('calendar-range-msg');
+    const calendarStatus = document.getElementById('calendar-status');
     const clearBtn = document.getElementById('clear-dates-btn');
     const prevBtn = document.getElementById('cal-prev-btn');
     const nextBtn = document.getElementById('cal-next-btn');
@@ -65,6 +66,40 @@
     let selectedCheckIn = checkInInput.value || null;
     let selectedCheckOut = checkOutInput.value || null;
 
+    function formatDateFriendly(isoStr) {
+      if (!isoStr) return '';
+      // Parse YYYY-MM-DD safely
+      const parts = isoStr.split('-');
+      if (parts.length !== 3) return isoStr;
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return weekdayNames[d.getDay()] + ' ' + d.getDate() + ' ' + monthNames[d.getMonth()];
+    }
+
+    function calculateNights(startIso, endIso) {
+      const p1 = startIso.split('-');
+      const p2 = endIso.split('-');
+      const d1 = new Date(parseInt(p1[0], 10), parseInt(p1[1], 10) - 1, parseInt(p1[2], 10));
+      const d2 = new Date(parseInt(p2[0], 10), parseInt(p2[1], 10) - 1, parseInt(p2[2], 10));
+      const diffMs = d2.getTime() - d1.getTime();
+      return Math.round(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    function updateStatusLine() {
+      if (!calendarStatus) return;
+
+      if (!selectedCheckIn) {
+        calendarStatus.innerText = 'Select your check-in date.';
+      } else if (selectedCheckIn && !selectedCheckOut) {
+        calendarStatus.innerText = 'Check-in ' + formatDateFriendly(selectedCheckIn) + '. Now select check-out.';
+      } else if (selectedCheckIn && selectedCheckOut) {
+        const nights = calculateNights(selectedCheckIn, selectedCheckOut);
+        const nightLabel = nights === 1 ? '1 night' : nights + ' nights';
+        calendarStatus.innerText = formatDateFriendly(selectedCheckIn) + ' to ' + formatDateFriendly(selectedCheckOut) + ', ' + nightLabel + '.';
+      }
+    }
+
     function showRangeWarning(text) {
       if (calendarMsg) {
         if (text) {
@@ -82,50 +117,87 @@
     }
 
     function getButtonForDate(isoDate) {
-      return calendarRoot.querySelector(`button[data-date="${isoDate}"]`);
+      return calendarRoot.querySelector('button[data-date="' + isoDate + '"]');
+    }
+
+    function removeTagBadge(btn) {
+      const existing = btn.querySelector('.cal-badge-tag');
+      if (existing) {
+        existing.remove();
+      }
+    }
+
+    function addTagBadge(btn, text) {
+      removeTagBadge(btn);
+      const tag = document.createElement('span');
+      tag.className = 'cal-badge-tag';
+      tag.innerText = text;
+      btn.appendChild(tag);
     }
 
     function updateVisualHighlight() {
       const allButtons = getAllDateButtons();
       allButtons.forEach(btn => {
-        btn.classList.remove('cal-selected-in', 'cal-selected-out', 'in-range');
-        btn.removeAttribute('aria-selected');
+        btn.classList.remove('is-start', 'is-end', 'in-range', 'is-dimmed');
+        btn.removeAttribute('aria-pressed');
+        removeTagBadge(btn);
       });
+
+      updateStatusLine();
 
       if (!selectedCheckIn) {
         showRangeWarning('');
         return;
       }
 
+      // Check-in button styling (.is-start)
       const inBtn = getButtonForDate(selectedCheckIn);
       if (inBtn) {
-        inBtn.classList.add('cal-selected-in');
-        inBtn.setAttribute('aria-selected', 'true');
+        inBtn.classList.add('is-start');
+        inBtn.setAttribute('aria-pressed', 'true');
+        addTagBadge(inBtn, 'In');
+      }
+
+      // If only check-in is selected, dim earlier dates or same date
+      if (selectedCheckIn && !selectedCheckOut) {
+        allButtons.forEach(btn => {
+          const btnDate = btn.getAttribute('data-date');
+          if (btnDate && btnDate <= selectedCheckIn && btn !== inBtn) {
+            btn.classList.add('is-dimmed');
+          }
+        });
       }
 
       if (selectedCheckOut && selectedCheckOut > selectedCheckIn) {
         const outBtn = getButtonForDate(selectedCheckOut);
         if (outBtn) {
-          outBtn.classList.add('cal-selected-out');
-          outBtn.setAttribute('aria-selected', 'true');
+          outBtn.classList.add('is-end');
+          outBtn.setAttribute('aria-pressed', 'true');
+          addTagBadge(outBtn, 'Out');
         }
 
-        // Check if range contains any unavailable night in between
+        // Highlight in-between nights & check if any unavailable night
         let hasTakenNight = false;
-        const cur = new Date(selectedCheckIn + 'T00:00:00');
-        const end = new Date(selectedCheckOut + 'T00:00:00');
+        const p1 = selectedCheckIn.split('-');
+        const p2 = selectedCheckOut.split('-');
+        const cur = new Date(parseInt(p1[0], 10), parseInt(p1[1], 10) - 1, parseInt(p1[2], 10));
+        const end = new Date(parseInt(p2[0], 10), parseInt(p2[1], 10) - 1, parseInt(p2[2], 10));
+
+        // Advance past start
+        cur.setDate(cur.getDate() + 1);
 
         while (cur < end) {
-          const iso = cur.toISOString().split('T')[0];
+          const y = cur.getFullYear();
+          const m = String(cur.getMonth() + 1).padStart(2, '0');
+          const d = String(cur.getDate()).padStart(2, '0');
+          const iso = y + '-' + m + '-' + d;
           const btn = getButtonForDate(iso);
           if (btn) {
             const isAvail = btn.getAttribute('data-available') === 'true';
             if (!isAvail) {
               hasTakenNight = true;
             }
-            if (iso !== selectedCheckIn && iso !== selectedCheckOut) {
-              btn.classList.add('in-range');
-            }
+            btn.classList.add('in-range');
           }
           cur.setDate(cur.getDate() + 1);
         }
@@ -195,11 +267,16 @@
         // Clicked a later date -> Check-out candidate!
         // Check if any intermediate night is taken/sold out
         let hasTakenNight = false;
-        const cur = new Date(selectedCheckIn + 'T00:00:00');
-        const end = new Date(clickedDate + 'T00:00:00');
+        const p1 = selectedCheckIn.split('-');
+        const p2 = clickedDate.split('-');
+        const cur = new Date(parseInt(p1[0], 10), parseInt(p1[1], 10) - 1, parseInt(p1[2], 10));
+        const end = new Date(parseInt(p2[0], 10), parseInt(p2[1], 10) - 1, parseInt(p2[2], 10));
 
         while (cur < end) {
-          const iso = cur.toISOString().split('T')[0];
+          const y = cur.getFullYear();
+          const m = String(cur.getMonth() + 1).padStart(2, '0');
+          const d = String(cur.getDate()).padStart(2, '0');
+          const iso = y + '-' + m + '-' + d;
           const checkBtn = getButtonForDate(iso);
           if (checkBtn && checkBtn.getAttribute('data-available') !== 'true') {
             hasTakenNight = true;
@@ -210,11 +287,10 @@
 
         if (hasTakenNight) {
           showRangeWarning("Those dates include a night that is taken.");
-          // Do not set invalid range
           return;
         }
 
-        // Range is valid! Check-out day itself is allowed even if sold out
+        // Range is valid!
         selectedCheckOut = clickedDate;
         showRangeWarning('');
         updateVisualHighlight();
@@ -232,7 +308,6 @@
         checkOutInput.value = '';
         showRangeWarning('');
         updateVisualHighlight();
-        // Trigger quote reset
         if (window.htmx) {
           window.htmx.trigger(quoteForm, 'change');
         } else {
@@ -263,4 +338,3 @@
     initRoomCalendar();
   }
 })();
-

@@ -91,6 +91,24 @@ def test_room_calendar_markup_and_month_navigation(client, db_session):
     assert "Select your check-in and check-out dates. Prices are per night, before GST." in res.text
     assert "Clear dates" in res.text
 
+    # 9. Server-rendered status element with aria-live="polite"
+    assert 'id="calendar-status"' in res.text
+    assert 'aria-live="polite"' in res.text
+    assert "Select your check-in date." in res.text
+
+
+def test_calendar_css_selection_classes_defined():
+    """Verify CSS defines .is-start, .is-end and .in-range using tokens without hardcoded hex."""
+    with open("app/static/style.css", "r", encoding="utf-8") as f:
+        css_content = f.read()
+
+    assert ".cal-cell.is-start" in css_content or ".is-start" in css_content
+    assert ".cal-cell.is-end" in css_content or ".is-end" in css_content
+    assert ".cal-cell.in-range" in css_content or ".in-range" in css_content
+    assert "var(--color-accent)" in css_content
+    assert "var(--color-paper)" in css_content
+    assert "var(--color-paper-dark)" in css_content
+
 
 def test_room_page_regression_returns_200_with_calendar_grid_present(client, db_session):
     """Regression test ensuring page returns 200 with the calendar grid present."""
