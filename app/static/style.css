@@ -460,7 +460,7 @@ h1, h2, h3, h4 {
 }
 
 .cal-cell {
-  background-color: #FFFFFF;
+  background-color: var(--color-paper-light);
   border: 1px solid var(--color-border);
   padding: var(--space-2) var(--space-1);
   text-align: center;
@@ -480,7 +480,7 @@ h1, h2, h3, h4 {
 
 .cal-cell:hover:not([aria-disabled="true"]):not(.cal-past) {
   border-color: var(--color-accent);
-  background-color: var(--color-paper-light);
+  background-color: var(--color-paper);
 }
 
 .cal-cell:focus-visible {
@@ -498,7 +498,7 @@ h1, h2, h3, h4 {
 }
 
 .cal-cell.cal-past {
-  background-color: #FAFAFA;
+  background-color: var(--color-paper-dark);
   color: var(--color-muted);
   opacity: 0.4;
   cursor: not-allowed;
@@ -515,21 +515,26 @@ h1, h2, h3, h4 {
 }
 
 /* Selected Check-in (.is-start), Check-out (.is-end) and range (.in-range) highlights */
-.cal-cell.is-start,
-.cal-cell.is-end {
+button.cal-cell.is-start,
+button.cal-cell.is-end {
   background-color: var(--color-accent) !important;
-  color: var(--color-paper) !important;
+  color: var(--color-paper-light) !important;
   border-color: var(--color-accent) !important;
   font-weight: 700;
 }
 
-.cal-cell.is-start .cal-price,
-.cal-cell.is-start .scarcity-badge,
-.cal-cell.is-start .cal-date,
-.cal-cell.is-end .cal-price,
-.cal-cell.is-end .scarcity-badge,
-.cal-cell.is-end .cal-date {
-  color: var(--color-paper) !important;
+button.cal-cell.is-start .cal-date,
+button.cal-cell.is-end .cal-date {
+  color: var(--color-paper-light) !important;
+  font-weight: 700 !important;
+}
+
+button.cal-cell.is-start .cal-price,
+button.cal-cell.is-start .scarcity-badge,
+button.cal-cell.is-end .cal-price,
+button.cal-cell.is-end .scarcity-badge {
+  color: var(--color-paper-light) !important;
+  opacity: 0.95;
 }
 
 .cal-badge-tag {
@@ -541,15 +546,21 @@ h1, h2, h3, h4 {
   margin-top: var(--space-1);
 }
 
-.cal-cell.is-start .cal-badge-tag,
-.cal-cell.is-end .cal-badge-tag {
-  color: var(--color-paper) !important;
+button.cal-cell.is-start .cal-badge-tag,
+button.cal-cell.is-end .cal-badge-tag {
+  color: var(--color-paper-light) !important;
 }
 
-.cal-cell.in-range {
-  background-color: var(--color-paper-dark) !important;
-  border-color: var(--color-accent);
+button.cal-cell.in-range {
+  background-color: color-mix(in srgb, var(--color-accent) 14%, var(--color-paper-light)) !important;
+  color: var(--color-ink) !important;
+  border-color: color-mix(in srgb, var(--color-accent) 40%, var(--color-border)) !important;
   border-radius: var(--radius-none);
+}
+
+button.cal-cell.in-range .cal-date,
+button.cal-cell.in-range .cal-price {
+  color: var(--color-ink) !important;
 }
 
 .cal-date {

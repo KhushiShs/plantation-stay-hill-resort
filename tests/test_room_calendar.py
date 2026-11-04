@@ -102,12 +102,12 @@ def test_calendar_css_selection_classes_defined():
     with open("app/static/style.css", "r", encoding="utf-8") as f:
         css_content = f.read()
 
-    assert ".cal-cell.is-start" in css_content or ".is-start" in css_content
-    assert ".cal-cell.is-end" in css_content or ".is-end" in css_content
-    assert ".cal-cell.in-range" in css_content or ".in-range" in css_content
+    assert ".is-start" in css_content
+    assert ".is-end" in css_content
+    assert ".in-range" in css_content
     assert "var(--color-accent)" in css_content
-    assert "var(--color-paper)" in css_content
-    assert "var(--color-paper-dark)" in css_content
+    assert "var(--color-paper-light)" in css_content
+    assert "color-mix" in css_content
 
 
 def test_room_page_regression_returns_200_with_calendar_grid_present(client, db_session):
