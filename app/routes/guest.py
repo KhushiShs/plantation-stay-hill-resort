@@ -137,12 +137,12 @@ def room_detail(room_type_id: str, request: Request, check_in: Optional[date] = 
     rate_plans = db.scalars(select(RatePlan).where(RatePlan.is_active == True)).all()
     today = date.today()
     
-    # 30-day visual availability calendar
+    # 60-day visual availability calendar (allows rendering full current and next month)
     calendar_allotments = db.scalars(
         select(Allotment).where(
             Allotment.room_type_id == room_type_id,
             Allotment.date >= today,
-            Allotment.date < today + timedelta(days=30)
+            Allotment.date < today + timedelta(days=60)
         ).order_by(Allotment.date.asc())
     ).all()
     allot_map = {a.date: a for a in calendar_allotments}
@@ -151,10 +151,47 @@ def room_detail(room_type_id: str, request: Request, check_in: Optional[date] = 
         select(DailyRate).where(
             DailyRate.room_type_id == room_type_id,
             DailyRate.date >= today,
-            DailyRate.date < today + timedelta(days=30)
+            DailyRate.date < today + timedelta(days=60)
         )
     ).all()
     rates_map = {r.date: r.price_paise for r in daily_rates}
+    
+    # Group calendar days by month (e.g. November 2026, December 2026)
+    # Mon-Sun weekday layout: Monday is weekday 0, Sunday is 6
+    import calendar
+    calendar_months = []
+    
+    current_month_key = (today.year, today.month)
+    next_month_date = (today.replace(day=28) + timedelta(days=5))
+    next_month_key = (next_month_date.year, next_month_date.month)
+    
+    for y, m in [current_month_key, next_month_key]:
+        cal = calendar.Calendar(firstweekday=0)  # Monday first
+        month_days = []
+        month_name = date(y, m, 1).strftime("%B %Y")
+        for d in cal.itermonthdates(y, m):
+            in_current_month = (d.month == m)
+            is_past = (d < today)
+            alt = allot_map.get(d)
+            price = rates_map.get(d, room.base_price_paise)
+            remaining = (alt.total - alt.sold - alt.held) if alt else 0
+            is_blackout = (alt.blackout if alt else False)
+            available = (remaining > 0) and not is_blackout and not is_past and in_current_month
+            month_days.append({
+                "date": d,
+                "iso": d.isoformat(),
+                "day_num": d.day,
+                "in_month": in_current_month,
+                "is_past": is_past,
+                "price_paise": price,
+                "remaining": remaining,
+                "available": available,
+                "sold_out": (not available and not is_past and in_current_month)
+            })
+        calendar_months.append({
+            "name": month_name,
+            "days": month_days
+        })
     
     calendar_days = []
     for i in range(30):
@@ -208,6 +245,7 @@ def room_detail(room_type_id: str, request: Request, check_in: Optional[date] = 
         "room": room,
         "rate_plans": rate_plans,
         "calendar_days": calendar_days,
+        "calendar_months": calendar_months,
         "default_check_in": def_check_in.strftime("%Y-%m-%d"),
         "default_check_out": def_check_out.strftime("%Y-%m-%d"),
         "initial_quote_html": initial_quote_html

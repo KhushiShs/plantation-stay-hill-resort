@@ -40,26 +40,62 @@
         </div>
       </div>
 
-      <!-- Minimal Tariff Calendar -->
-      <div class="calendar-wrap">
-        <h2 style="font-size: 1.25rem; margin-bottom: var(--space-2);">Tariff & Live Availability Calendar (Next 30 Days)</h2>
-        <p class="caption-line" style="margin-bottom: var(--space-3);">Dates with remaining stock &le; 3 show real-time scarcity. Struck-through dates in mist are sold out or blacked out.</p>
-
-        <div class="calendar-grid">
-          {% for day in calendar_days %}
-          <div class="cal-cell {% if not day.available %}sold-out{% endif %}">
-            <span class="cal-date">{{ day.date.day }} {{ day.date.strftime('%b') }}</span>
-            {% if day.available %}
-            <span class="cal-price">{{ day.price_paise | format_paise }}</span>
-            {% if day.remaining <= 3 %}
-            <span class="scarcity-badge">{{ day.remaining }} left</span>
-            {% endif %}
-            {% else %}
-            <span class="cal-price">Full</span>
-            {% endif %}
-          </div>
-          {% endfor %}
+      <!-- Interactive Tariff Calendar -->
+      <div class="calendar-wrap" id="tariff-calendar">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2);">
+          <h2 style="font-size: 1.25rem; margin: 0;">Tariff &amp; Live Availability Calendar</h2>
+          <button type="button" id="clear-dates-btn" style="background: none; border: none; font-size: 0.82rem; color: var(--color-accent); cursor: pointer; text-decoration: underline; padding: 4px;">
+            Clear dates
+          </button>
         </div>
+        <p class="caption-line" style="margin-bottom: var(--space-3);">
+          Select your check-in and check-out dates. Prices are per night, before GST.
+        </p>
+
+        <!-- Dynamic range warning notice -->
+        <div id="calendar-range-msg" style="display: none; background-color: #FDF2F0; border-left: 3px solid var(--color-accent); color: var(--color-accent); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); font-size: 0.88rem; font-weight: 500;"></div>
+
+        {% for month in calendar_months %}
+        <div class="calendar-month" style="margin-bottom: var(--space-5);">
+          <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: var(--space-2);">{{ month.name }}</h3>
+          
+          <div class="calendar-grid">
+            <div class="cal-day-header">Mon</div>
+            <div class="cal-day-header">Tue</div>
+            <div class="cal-day-header">Wed</div>
+            <div class="cal-day-header">Thu</div>
+            <div class="cal-day-header">Fri</div>
+            <div class="cal-day-header">Sat</div>
+            <div class="cal-day-header">Sun</div>
+
+            {% for day in month.days %}
+              {% if day.in_month %}
+                <button type="button"
+                        class="cal-cell {% if day.sold_out %}sold-out{% endif %} {% if day.is_past %}cal-past{% endif %}"
+                        data-date="{{ day.iso }}"
+                        data-available="{{ 'true' if day.available else 'false' }}"
+                        data-sold-out="{{ 'true' if day.sold_out else 'false' }}"
+                        {% if day.sold_out or day.is_past %}aria-disabled="true"{% endif %}
+                        aria-label="{{ day.date.strftime('%d %B %Y') }}{% if day.sold_out %} - Sold out{% elif day.available %} - {{ day.price_paise | format_paise }}{% endif %}">
+                  <span class="cal-date">{{ day.day_num }}</span>
+                  {% if day.available %}
+                    <span class="cal-price">{{ day.price_paise | format_paise }}</span>
+                    {% if day.remaining <= 3 %}
+                      <span class="scarcity-badge">{{ day.remaining }} left</span>
+                    {% endif %}
+                  {% elif day.sold_out %}
+                    <span class="cal-price">Full</span>
+                  {% elif day.is_past %}
+                    <span class="cal-price">&mdash;</span>
+                  {% endif %}
+                </button>
+              {% else %}
+                <div class="cal-cell cal-empty" aria-hidden="true"></div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
       </div>
     </div>
 
@@ -123,4 +159,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/room-calendar.js"></script>
 {% endblock %}

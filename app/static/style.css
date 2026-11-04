@@ -414,10 +414,27 @@ h1, h2, h3, h4 {
   text-align: center;
   display: flex;
   flex-direction: column;
-  min-height: 52px;
+  min-height: 48px;
+  min-width: 44px;
   justify-content: center;
+  align-items: center;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.cal-cell:hover:not([aria-disabled="true"]):not(.cal-past) {
+  border-color: var(--color-accent);
+  background-color: var(--color-paper-light);
+}
+
+.cal-cell:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  z-index: 2;
 }
 
 .cal-cell.sold-out, .cal-cell.blackout {
@@ -425,6 +442,49 @@ h1, h2, h3, h4 {
   color: var(--color-muted);
   text-decoration: line-through;
   opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cal-cell.cal-past {
+  background-color: #FAFAFA;
+  color: var(--color-muted);
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cal-cell.cal-empty {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+/* Selected Check-in, Check-out and range highlights */
+.cal-cell.cal-selected-in {
+  background-color: var(--color-accent) !important;
+  color: #FFFFFF !important;
+  border-color: var(--color-accent) !important;
+  font-weight: 700;
+}
+
+.cal-cell.cal-selected-in .cal-price, .cal-cell.cal-selected-in .scarcity-badge {
+  color: #FFFFFF !important;
+}
+
+.cal-cell.cal-selected-out {
+  background-color: var(--color-accent) !important;
+  color: #FFFFFF !important;
+  border-color: var(--color-accent) !important;
+  font-weight: 700;
+}
+
+.cal-cell.cal-selected-out .cal-price, .cal-cell.cal-selected-out .scarcity-badge {
+  color: #FFFFFF !important;
+}
+
+.cal-cell.cal-in-range {
+  background-color: #EAE6DF;
+  border-color: var(--color-accent);
+  border-radius: 0;
 }
 
 .cal-date {
