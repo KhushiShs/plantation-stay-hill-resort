@@ -58,7 +58,7 @@ This document details the local setup, cloud deployment on Render + Neon Postgre
 ### Step 1: Provision Neon PostgreSQL Database
 1. Log into your [Neon Console](https://neon.tech).
 2. Create a new project (e.g. `plantation-stay-prod`).
-3. Copy the pooled connection string (format: `postgresql://user:password@ep-xyz.us-east-2.aws.neon.tech/neondb?sslmode=require`).
+3. Copy the pooled connection string (format: `postgresql://<user>:<password>@<endpoint>.us-east-2.aws.neon.tech/<dbname>?sslmode=require`).
    *(Note: The application automatically normalizes this connection string to use the `postgresql+psycopg://` driver).*
 
 ### Step 2: Deploy to Render
@@ -76,11 +76,11 @@ Configure the required environment variable values in the Render Dashboard (**En
 | Variable Name | Description | Example / Notes |
 | :--- | :--- | :--- |
 | `APP_ENV` | Environment mode (`production` or `development`) | `production` |
-| `DATABASE_URL` | Neon PostgreSQL pooled connection URI | `postgresql://user:secret@ep-xyz.neon.tech/neondb?sslmode=require` |
-| `SECRET_KEY` | Cryptographic secret for session cookie encryption | 64-char hex string (e.g. `openssl rand -hex 32`) |
-| `WEBHOOK_SECRET` | HMAC SHA256 secret for mock payment verification | 64-char hex string |
+| `DATABASE_URL` | Neon PostgreSQL pooled connection URI | `postgresql://<db_user>:<db_password>@<db_host>/<db_name>?sslmode=require` |
+| `SECRET_KEY` | Cryptographic secret for session cookie encryption | Generate via `openssl rand -hex 32` |
+| `WEBHOOK_SECRET` | HMAC SHA256 secret for mock payment verification | Generate via `openssl rand -hex 32` |
 | `ALLOWED_HOSTS` | Comma-separated allowed hostnames for HTTP Host header | `localhost,127.0.0.1,plantation-stay.onrender.com,*.onrender.com` |
-| `ANTHROPIC_API_KEY` | Anthropic API key for AI Enquiry Router | `sk-ant-api03-...` |
+| `ANTHROPIC_API_KEY` | Anthropic API key for AI Enquiry Router | Paste your key from console.anthropic.com |
 | `ANTHROPIC_MODEL` | Model specifier for Anthropic router | `claude-3-7-sonnet-20250219` |
 
 > [!IMPORTANT]

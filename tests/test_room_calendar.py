@@ -49,13 +49,13 @@ def test_room_calendar_markup_and_month_navigation(client, db_session):
     # 1. Month sections
     assert '<section class="cal-month"' in res.text
     month_sections = re.findall(r'<section class="cal-month"[^>]*>', res.text)
-    assert len(month_sections) >= 5, f"Expected at least 5 months for 180 days, found {len(month_sections)}"
+    assert len(month_sections) >= 3, f"Expected at least 3 months for 90 days, found {len(month_sections)}"
 
     # 2. Exactly one visible month, rest hidden
     visible_months = [m for m in month_sections if "hidden" not in m]
     hidden_months = [m for m in month_sections if "hidden" in m]
     assert len(visible_months) == 1, f"Expected exactly 1 visible month, got {len(visible_months)}"
-    assert len(hidden_months) >= 4
+    assert len(hidden_months) >= 2
 
     # 3. Navigation buttons with aria-labels
     assert 'aria-label="Previous month"' in res.text
@@ -72,7 +72,7 @@ def test_room_calendar_markup_and_month_navigation(client, db_session):
 
     # 5. Day buttons with data-date and data-price
     date_buttons = re.findall(r'<button[^>]+data-date="(\d{4}-\d{2}-\d{2})"[^>]*>', res.text)
-    assert len(date_buttons) >= 150, f"Expected at least 150 day buttons across 180 days, found {len(date_buttons)}"
+    assert len(date_buttons) >= 90, f"Expected at least 90 day buttons across 90 days, found {len(date_buttons)}"
     assert 'data-price=' in res.text
 
     # 6. Sold-out days disabled + aria-disabled="true"

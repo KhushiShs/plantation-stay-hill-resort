@@ -156,15 +156,15 @@ def room_detail(room_type_id: str, request: Request, check_in: Optional[date] = 
     ).all()
     rates_map = {r.date: r.price_paise for r in daily_rates}
     
-    # Render all months that have rate/allotment data (up to 180 days)
+    # Render the next 90 days (3 upcoming months)
     # Mon-Sun weekday layout: Monday is weekday 0, Sunday is 6
     import calendar
     calendar_months = []
     
-    # Collect unique (year, month) pairs spanning the 180 days
+    # Collect unique (year, month) pairs spanning 90 days (3 months)
     month_keys = []
     cur_d = today.replace(day=1)
-    end_d = today + timedelta(days=180)
+    end_d = today + timedelta(days=90)
     while cur_d < end_d:
         key = (cur_d.year, cur_d.month)
         if key not in month_keys:

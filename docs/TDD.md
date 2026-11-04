@@ -162,3 +162,4 @@ The system is validated by an automated test suite of 99 unit, integration, and 
 - `tests/test_room_calendar.py`: Interactive calendar pagination and state tracking.
 
 **Suite Status**: `99 passed in 254.16s`
+
