@@ -30,7 +30,7 @@ def init_db():
         else:
             logger.info(f"Database already populated ({room_types_count} room types). Skipping seed.")
     except Exception as e:
-        logger.error(f"Error during init_db: {e}", exc_info=True)
+        logger.error(f"Error during init_db: {e}")
         sys.exit(1)
     finally:
         db.close()
@@ -38,4 +38,3 @@ def init_db():
 
 if __name__ == "__main__":
     init_db()
-

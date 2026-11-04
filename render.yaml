@@ -20,3 +20,9 @@ services:
         sync: false
       - key: ANTHROPIC_MODEL
         sync: false
+      - key: DEMO_RESERVATIONS_PASSWORD
+        sync: false
+      - key: DEMO_GM_PASSWORD
+        sync: false
+      - key: DEMO_SALES_PASSWORD
+        sync: false

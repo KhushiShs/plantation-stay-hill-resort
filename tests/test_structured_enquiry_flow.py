@@ -112,3 +112,4 @@ def test_structured_event_form_submission_lanes_and_owners(client, db_session):
         print(f"[Family Gathering] Category: {enq_family.category}, Owner Role: {enq_family.owner_role}")
         assert enq_family.category == "room"
         assert enq_family.owner_role == "reservations"
+

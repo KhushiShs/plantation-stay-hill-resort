@@ -103,17 +103,24 @@ Render free/starter web services spin down after 15 minutes of inactivity.
 
 ---
 
-## 4. Demonstration Staff Logins
+## 4. Staff Accounts & Logins
 
 > [!NOTE]
 > All names, phone numbers, booking references, and credentials in this codebase are synthetic test data created specifically for assessment purposes.
 
 Staff portal URL: `/staff/login`
 
+### Local Development Logins
+When running locally (`APP_ENV=development`):
+
 | Role | Username / Email | Password | Access Rights |
 | :--- | :--- | :--- | :--- |
-| **General Manager** | `gm@plantationstay.com` | `EstateGM2026!` | Full access: Rate calendar, allotments, blackouts, promos, bookings CSV export, enquiry inbox (all lanes including Unsorted and Complaints), refund processing, audit ledger. |
-| **Reservations Staff** | `reservations@plantationstay.com` | `ResDesk2026!` | Daily allotments, room rates, bookings ledger, CSV export, room reservation enquiry routing. |
+| **General Manager** | `gm@plantationstay.local` | `GMDemo2026!` | Full access: Rate calendar, allotments, blackouts, promos, bookings CSV export, enquiry inbox (all lanes including Unsorted and Complaints), refund processing, audit ledger. |
+| **Reservations Staff** | `reservations@plantationstay.local` | `ReservationsDemo2026!` | Daily allotments, room rates, bookings ledger, CSV export, room reservation enquiry routing. |
+| **Sales & Events** | `sales@plantationstay.local` | `SalesDemo2026!` | Event and wedding enquiry lane, quotation drafts. |
+
+### Production / Live Site Logins
+Because the repository is public, live logins are provided separately in the submission. Production seeding requires `DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, and `DEMO_SALES_PASSWORD` (minimum 12 characters each) set in the hosting environment variables. No live passwords appear in this repository.
 
 ---
 
@@ -124,10 +131,10 @@ Measured on the production build with GZip compression and static asset caching 
 | Page / Resource | Gzip Payload Size | Slow 4G Estimated TTI (400 Kbps, 170ms RTT) | Budget Target | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **Home Page HTML** | 7.75 KB | 0.83s | < 50 KB | PASS |
-| **Estate Room Detail HTML (180 days)** | 141.16 KB | 3.50s | < 180 KB | PASS |
-| **Core Non-image Assets** (CSS, HTMX, Calendar JS) | 73.13 KB | 2.14s | < 150 KB | PASS |
-| **Home Total Load (HTML + Assets)** | 80.88 KB | 2.30s | < 3.50s | PASS |
-| **Room Total Load (HTML + Assets)** | 214.29 KB | 4.97s | < 6.00s | PASS |
+| **Estate Room Detail HTML (90 days / 3 mo)** | 5.22 KB | 0.78s | < 50 KB | PASS |
+| **Core Non-image Assets** (CSS, HTMX, Calendar JS) | 21.50 KB | 1.10s | < 50 KB | PASS |
+| **Home Total Load (HTML + Assets)** | 29.25 KB | 1.25s | < 3.50s | PASS |
+| **Room Total Load (HTML + Assets)** | 26.72 KB | 1.21s | < 3.50s | PASS |
 
 - **Image Delivery**: Hero and room imagery delivered in modern WebP format with responsive `<picture>` / `srcset` targeting 400w, 768w, and 1200w breakpoints.
 - **Zero Client Frameworks**: Server-rendered Jinja2 + HTMX maintains total client JavaScript weight under 15 KB (excluding HTMX runtime).

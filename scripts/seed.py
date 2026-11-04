@@ -1,4 +1,6 @@
 """Seed database with baseline data according to AGENTS.md and requirements."""
+import os
+import sys
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -8,17 +10,65 @@ from app.models import (
 )
 from app.security import hash_password
 
+# Default demo passwords for local development only
+DEFAULT_LOCAL_RESERVATIONS_PWD = "ReservationsDemo2026!"
+DEFAULT_LOCAL_GM_PWD = "GMDemo2026!"
+DEFAULT_LOCAL_SALES_PWD = "SalesDemo2026!"
+
+
+def get_staff_seed_passwords() -> dict:
+    """
+    Resolve staff credentials safely based on APP_ENV:
+    - In development (or test): fallback to local demo passwords if unset.
+    - In production: DEMO_RESERVATIONS_PASSWORD, DEMO_GM_PASSWORD, and DEMO_SALES_PASSWORD
+      MUST be explicitly configured and at least 12 characters long. Aborts with error if missing.
+    """
+    app_env = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "development")).lower()
+
+    res_pwd = os.getenv("DEMO_RESERVATIONS_PASSWORD")
+    gm_pwd = os.getenv("DEMO_GM_PASSWORD")
+    sales_pwd = os.getenv("DEMO_SALES_PASSWORD")
+
+    if app_env == "production":
+        missing_or_short = []
+        if not res_pwd or len(res_pwd) < 12:
+            missing_or_short.append("DEMO_RESERVATIONS_PASSWORD (missing or < 12 chars)")
+        if not gm_pwd or len(gm_pwd) < 12:
+            missing_or_short.append("DEMO_GM_PASSWORD (missing or < 12 chars)")
+        if not sales_pwd or len(sales_pwd) < 12:
+            missing_or_short.append("DEMO_SALES_PASSWORD (missing or < 12 chars)")
+
+        if missing_or_short:
+            raise ValueError(
+                "Production database seeding aborted: The following staff password environment "
+                f"variables are required and must be at least 12 characters: {', '.join(missing_or_short)}. "
+                "Set DEMO_RESERVATIONS_PASSWORD, DEMO_GM_PASSWORD, and DEMO_SALES_PASSWORD before seeding production."
+            )
+    else:
+        # Development fallback
+        res_pwd = res_pwd or DEFAULT_LOCAL_RESERVATIONS_PWD
+        gm_pwd = gm_pwd or DEFAULT_LOCAL_GM_PWD
+        sales_pwd = sales_pwd or DEFAULT_LOCAL_SALES_PWD
+
+    return {
+        "reservations": res_pwd,
+        "gm": gm_pwd,
+        "sales": sales_pwd
+    }
+
 
 def seed_database(session: Session, start_date: date = None) -> None:
     """Populate database with room types, rates for 180 days, users, slabs, promos."""
     if start_date is None:
         start_date = date.today()
 
+    passwords = get_staff_seed_passwords()
+
     # 1. Users (reservations, gm, sales)
     users_data = [
-        ("reservations@plantationstay.local", "ReservationsDemo2026!", "Reservations Desk", "reservations"),
-        ("gm@plantationstay.local", "GMDemo2026!", "General Manager", "gm"),
-        ("sales@plantationstay.local", "SalesDemo2026!", "Sales & Events Team", "sales"),
+        ("reservations@plantationstay.local", passwords["reservations"], "Reservations Desk", "reservations"),
+        ("gm@plantationstay.local", passwords["gm"], "General Manager", "gm"),
+        ("sales@plantationstay.local", passwords["sales"], "Sales & Events Team", "sales"),
     ]
     for email, pwd, name, role in users_data:
         existing = session.scalar(select(User).where(User.email == email))

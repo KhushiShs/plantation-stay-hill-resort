@@ -3,6 +3,10 @@ import os
 
 # Ensure tests run under development mode so https_only is False for test client sessions
 os.environ.setdefault("APP_ENV", "development")
+# Ensure tests use default local demo credentials when seeding
+os.environ.setdefault("DEMO_RESERVATIONS_PASSWORD", "ReservationsDemo2026!")
+os.environ.setdefault("DEMO_GM_PASSWORD", "GMDemo2026!")
+os.environ.setdefault("DEMO_SALES_PASSWORD", "SalesDemo2026!")
 
 import pytest
 from sqlalchemy import create_engine, text
