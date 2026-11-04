@@ -1,29 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Mock Payment Gateway — Test Mode — {{ app_name }}{% endblock %}
+{% block title %}Payment — {{ app_name }}{% endblock %}
 
 {% block content %}
 <!-- Thin 2px Hold Timer across top of viewport -->
 <div id="hold-progress" class="hold-timer-line"></div>
 
-<div class="container" style="max-width: 600px; padding: var(--space-6) var(--space-4) var(--space-8);">
-  <!-- Separate, plain test mode styling -->
-  <div style="background-color: #FFFFFF; border: 1px solid var(--color-ink); padding: var(--space-6); border-radius: var(--radius-sm);">
+<div class="container" style="max-width: 640px; padding: var(--space-6) var(--space-4) var(--space-8);">
+  <div style="background-color: #FFFFFF; border: 1px solid var(--color-border); padding: var(--space-6); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
     
-    <div style="border-bottom: 2px solid var(--color-ink); padding-bottom: var(--space-3); margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: baseline;">
+    <div style="border-bottom: 2px solid var(--color-ink); padding-bottom: var(--space-3); margin-bottom: var(--space-4); display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-2);">
       <div>
-        <span class="label-caps" style="color: var(--color-accent); font-weight: 700;">PAYMENT GATEWAY SIMULATOR</span>
-        <h1 style="font-size: 1.5rem; margin-top: 4px;">Test Mode &mdash; No Money Charged</h1>
+        <span class="label-caps" style="color: var(--color-accent); font-weight: 700;">SECURE DIRECT PAYMENT</span>
+        <h1 style="font-size: 1.5rem; margin-top: 4px;">Confirm Your Reservation</h1>
       </div>
       <div style="text-align: right;">
-        <span class="label-caps">HOLD TIME LEFT</span><br>
-        <strong id="timer-display" class="tabular" style="font-size: 1.1rem; color: var(--color-accent);">{{ minutes_left }}m {{ seconds_left }}s</strong>
+        <span class="label-caps">HOLD EXPIRES IN</span><br>
+        <strong id="timer-display" class="tabular" style="font-size: 1.15rem; color: var(--color-accent);">{{ minutes_left }}:{{ "%02d" % seconds_left }}</strong>
       </div>
     </div>
 
-    <p style="color: var(--color-muted); font-size: 0.95rem; margin-bottom: var(--space-4);">
-      This is a development simulator for the payment webhook callback. Select a scenario below to test the atomic booking transition:
-    </p>
+    {% if payment_failed %}
+    <div style="background-color: #FDF2F0; border-left: 3px solid var(--color-accent); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-4);">
+      <p style="color: var(--color-accent); font-weight: 600; margin: 0 0 4px;">Payment did not go through.</p>
+      <p style="color: var(--color-ink); font-size: 0.92rem; margin: 0;">
+        Your room remains held for <strong>{{ minutes_left }} more minutes</strong>. You may retry your payment below.
+      </p>
+    </div>
+    {% endif %}
 
     <div class="printed-bill" style="margin-bottom: var(--space-5);">
       <div class="bill-line">
@@ -39,40 +43,65 @@
       <div class="bill-line">
         <span>Accommodation</span>
         <span class="dot-leader"></span>
-        <span class="bill-val">{{ booking.room_type_id }}</span>
+        <span class="bill-val"><strong>{{ room_name }}</strong></span>
       </div>
-      <div class="bill-line bill-total">
-        <span>Amount Due</span>
+      <div class="bill-line">
+        <span>Stay Dates</span>
+        <span class="dot-leader"></span>
+        <span class="bill-val">{{ booking.check_in | format_date_str }} &mdash; {{ booking.check_out | format_date_str }}</span>
+      </div>
+      <div class="bill-line">
+        <span>Duration &amp; Guests</span>
+        <span class="dot-leader"></span>
+        <span class="bill-val">{{ nights_count }} {% if nights_count == 1 %}Night{% else %}Nights{% endif %}, {{ booking.num_guests }} {% if booking.num_guests == 1 %}Guest{% else %}Guests{% endif %}</span>
+      </div>
+      <div class="bill-line bill-total" style="margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px dashed var(--color-border);">
+        <span>Total Payable (incl. GST)</span>
         <span class="dot-leader"></span>
         <span class="bill-val">{{ booking.grand_total_paise | format_paise }}</span>
       </div>
     </div>
 
     <!-- Actions -->
-    <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+    <div style="display: flex; flex-direction: column; gap: var(--space-4);">
       <!-- Scenario 1: Success -->
-      <form action="/book/{{ booking.reference }}/mock-pay" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="btn btn-primary" style="width: 100%; min-height: 48px; font-weight: 600;">
-          Simulate Successful Payment &rarr;
-        </button>
-      </form>
+      <div>
+        <form action="/book/{{ booking.reference }}/mock-pay" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-primary" style="width: 100%; min-height: 48px; font-weight: 600; font-size: 1.05rem;">
+            Pay {{ booking.grand_total_paise | format_paise }} (test) &rarr;
+          </button>
+        </form>
+        <p class="caption-line" style="margin-top: 4px; text-align: center;">
+          Confirms your booking instantly and converts the website hold into a sold reservation.
+        </p>
+      </div>
 
       <!-- Scenario 2: Failure -->
-      <form action="/book/{{ booking.reference }}/mock-fail" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="btn btn-secondary" style="width: 100%;">
-          Simulate Payment Failure (Releases Hold)
-        </button>
-      </form>
+      <div>
+        <form action="/book/{{ booking.reference }}/mock-fail" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-secondary" style="width: 100%;">
+            Payment fails
+          </button>
+        </form>
+        <p class="caption-line" style="margin-top: 4px; text-align: center;">
+          Simulates a card or bank decline; your room hold remains active so you can retry.
+        </p>
+      </div>
 
-      <!-- Scenario 3: Abandon -->
-      <form action="/book/{{ booking.reference }}/mock-abandon" method="POST">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        <button type="submit" class="btn btn-secondary" style="width: 100%; border-style: dashed;">
-          Simulate Abandon / Cancel
-        </button>
-      </form>
+      <!-- Scenario 3: Cancel -->
+      <div>
+        <form action="/book/{{ booking.reference }}/mock-abandon" method="POST">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit" class="btn btn-secondary" style="width: 100%; border-style: dashed; opacity: 0.85;">
+            Cancel booking
+          </button>
+        </form>
+        <p class="caption-line" style="margin-top: 4px; text-align: center;">
+          Releases the 10-minute hold immediately back to estate inventory and returns to the home page.
+        </p>
+      </div>
     </div>
   </div>
 </div>
@@ -80,7 +109,6 @@
 
 {% block scripts %}
 <script>
-  // Dynamic countdown timer based on expiry seconds
   let totalSeconds = {{ remaining_seconds }};
   const initialSeconds = {{ hold_minutes * 60 }};
   const timerDisplay = document.getElementById('timer-display');
@@ -89,7 +117,7 @@
   const interval = setInterval(() => {
     if (totalSeconds <= 0) {
       clearInterval(interval);
-      timerDisplay.innerText = "Expired";
+      timerDisplay.innerText = "0:00";
       progressBar.style.width = "0%";
       window.location.reload();
       return;
@@ -97,10 +125,9 @@
     totalSeconds--;
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-    timerDisplay.innerText = `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    timerDisplay.innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     const pct = Math.max(0, (totalSeconds / initialSeconds) * 100);
     progressBar.style.width = pct + "%";
   }, 1000);
 </script>
 {% endblock %}
-

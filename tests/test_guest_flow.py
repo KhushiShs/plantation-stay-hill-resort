@@ -94,7 +94,7 @@ def test_step2_hold_creation_recomputes_price_and_writes_nights(client, db_sessi
         "num_rooms": "1",
         "guest_name": "Rohan Deshmukh",
         "guest_email": "rohan@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }
 
@@ -125,7 +125,7 @@ def test_dpdp_consent_mandatory(client):
         "check_out": "2026-12-07",
         "guest_name": "Rohan Deshmukh",
         "guest_email": "rohan@example.com",
-        "guest_phone": "9876543210"
+        "guest_phone": "+91 98765 43210"
         # dpdp_consent omitted
     }
     res = client.post("/book/hold", data=payload)
@@ -145,7 +145,7 @@ def test_session_isolation_another_session_cannot_pay_or_cancel(client, db_sessi
         "num_rooms": "1",
         "guest_name": "Owner Guest",
         "guest_email": "owner@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }
     res = client.post("/book/hold", data=payload, follow_redirects=False)
@@ -180,7 +180,7 @@ def test_mock_pay_success_flow(client, db_session):
         "num_rooms": "1",
         "guest_name": "Successful Guest",
         "guest_email": "success@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }
     res = client.post("/book/hold", data=payload, follow_redirects=False)
@@ -202,9 +202,14 @@ def test_mock_pay_success_flow(client, db_session):
 
 
 def test_mock_fail_and_abandon_release_hold(client, db_session):
-    """Simulate Failure and Simulate Abandon release held allotment."""
+    """
+    Payment failure must NOT release the hold:
+    - Retains booking status='held' so guest can retry.
+    - Redirects to /pay?failed=1 showing failure notice and retry options.
+    - Cancel / Abandon releases the hold and marks cancelled.
+    """
     csrf = get_csrf_token(client)
-    # 1. Failure
+    # 1. Failure scenario
     res1 = client.post("/book/hold", data={
         "csrf_token": csrf,
         "room_type_id": "estate-room",
@@ -213,16 +218,20 @@ def test_mock_fail_and_abandon_release_hold(client, db_session):
         "check_out": "2026-12-15",
         "guest_name": "Fail Guest",
         "guest_email": "fail@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }, follow_redirects=False)
     ref1 = res1.headers["location"].split("/")[-2]
 
-    client.post(f"/book/{ref1}/mock-fail", data={"csrf_token": csrf})
+    fail_res = client.post(f"/book/{ref1}/mock-fail", data={"csrf_token": csrf}, follow_redirects=True)
+    assert fail_res.status_code == 200
+    assert "Payment did not go through" in fail_res.text
+    assert "Your room remains held" in fail_res.text
+    # Proves hold is NOT released:
     b1 = db_session.scalar(select(Booking).where(Booking.reference == ref1))
-    assert b1.status == "cancelled"
+    assert b1.status == "held"
 
-    # 2. Abandon
+    # 2. Abandon / Cancel scenario
     res2 = client.post("/book/hold", data={
         "csrf_token": csrf,
         "room_type_id": "estate-room",
@@ -231,7 +240,7 @@ def test_mock_fail_and_abandon_release_hold(client, db_session):
         "check_out": "2026-12-17",
         "guest_name": "Abandon Guest",
         "guest_email": "abandon@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }, follow_redirects=False)
     ref2 = res2.headers["location"].split("/")[-2]
@@ -258,7 +267,7 @@ def test_webhook_validation_stale_timestamp_bad_sig_repeat(client, db_session):
         "check_out": "2026-12-19",
         "guest_name": "Webhook Guest",
         "guest_email": "webhook@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }, follow_redirects=False)
     ref = res.headers["location"].split("/")[-2]
@@ -333,7 +342,7 @@ def test_booking_lookup_unified_error_message(client, db_session):
         "check_out": "2026-12-23",
         "guest_name": "Lookup Guest",
         "guest_email": "lookup@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }, follow_redirects=False)
     ref = b_res.headers["location"].split("/")[-2]
@@ -368,7 +377,7 @@ def test_pay_page_after_expiry_shows_hold_expired_page(client, db_session):
         "check_out": "2027-01-11",
         "guest_name": "Late Guest",
         "guest_email": "late@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }, follow_redirects=False)
     assert res.status_code == 303, f"Expected 303 redirect, got {res.status_code}: {res.text[:300]}"
@@ -401,7 +410,7 @@ def test_mock_pay_after_expiry_rehold_or_needs_refund(client, db_session):
         "check_out": "2027-01-13",
         "guest_name": "Refund Candidate",
         "guest_email": "refundcand@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }, follow_redirects=False)
     ref = res.headers["location"].split("/")[-2]
@@ -438,7 +447,7 @@ def test_rate_limit_enforced_and_returns_429(client):
         "check_out": "2026-12-07",
         "guest_name": "Rapid Clicker",
         "guest_email": "rapid@example.com",
-        "guest_phone": "9876543210",
+        "guest_phone": "+91 98765 43210",
         "dpdp_consent": "true"
     }
 

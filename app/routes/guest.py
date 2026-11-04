@@ -28,6 +28,7 @@ from app.security import (
     verify_hmac_signature,
     check_rate_limit
 )
+from app.validators import validate_phone_number
 from app.formatters import format_paise, format_date_str, format_date_short
 
 router = APIRouter()
@@ -329,6 +330,33 @@ def create_hold_endpoint(
     check_rate_limit(request, "book_hold", max_requests=10, window_seconds=60)
     verify_csrf_token(request, csrf_token)
     
+    # Phone validation
+    is_valid_phone, phone_err, cleaned_phone = validate_phone_number(guest_phone)
+    if not is_valid_phone:
+        stay_dates = get_stay_nights(check_in, check_out)
+        breakdown = calculate_pricing(db, room_type_id, rate_plan_id, stay_dates, num_guests, promo_code)
+        room = db.get(RoomType, room_type_id)
+        rate_plan = db.get(RatePlan, rate_plan_id)
+        return templates.TemplateResponse(request, "booking_step1_2.html", {
+            "app_name": settings.app_name,
+            "room": room,
+            "rate_plan": rate_plan,
+            "check_in": check_in,
+            "check_out": check_out,
+            "num_guests": num_guests,
+            "num_rooms": num_rooms,
+            "promo_code": promo_code or "",
+            "breakdown": breakdown,
+            "csrf_token": get_or_set_csrf_token(request),
+            "error": "Please correct the phone number below.",
+            "phone_error": phone_err,
+            "form_data": {
+                "guest_name": guest_name,
+                "guest_email": guest_email,
+                "guest_phone": guest_phone
+            }
+        }, status_code=400)
+
     if not dpdp_consent:
         raise HTTPException(status_code=422, detail="DPDP Act 2023 consent is required to proceed.")
         
@@ -365,7 +393,7 @@ def create_hold_endpoint(
         hold_expires_at=expires_at,
         guest_name=guest_name.strip(),
         guest_email=guest_email.strip().lower(),
-        guest_phone=guest_phone.strip(),
+        guest_phone=cleaned_phone,
         dpdp_consent=True,
         room_total_paise=breakdown.room_total_paise,
         discount_paise=breakdown.discount_paise,
@@ -439,9 +467,18 @@ def mock_payment_page(reference: str, request: Request, db: Session = Depends(ge
     remaining_secs = max(0, int((booking.hold_expires_at - now).total_seconds()))
     csrf_token = get_or_set_csrf_token(request)
     
+    room = db.get(RoomType, booking.room_type_id)
+    room_name = room.name if room else booking.room_type_id
+    nights = db.scalars(select(BookingNight).where(BookingNight.booking_id == booking.id)).all()
+    nights_count = len(nights) if nights else max(1, (booking.check_out - booking.check_in).days)
+    payment_failed = request.query_params.get("failed") == "1"
+
     return templates.TemplateResponse(request, "booking_payment.html", {
         "app_name": settings.app_name,
         "booking": booking,
+        "room_name": room_name,
+        "nights_count": nights_count,
+        "payment_failed": payment_failed,
         "remaining_seconds": remaining_secs,
         "minutes_left": remaining_secs // 60,
         "seconds_left": remaining_secs % 60,
@@ -498,15 +535,12 @@ def mock_fail_action(
         raise HTTPException(status_code=403, detail="Unauthorized booking session")
         
     booking = db.scalar(select(Booking).where(Booking.reference == reference))
-    if booking:
-        release_booking_hold(db, booking.id, reason="cancelled")
-        # Mark payment failed
-        payment = db.scalar(select(Payment).where(Payment.booking_id == booking.id, Payment.status == "pending"))
-        if payment:
-            payment.status = "failed"
-        db.commit()
-        
-    return RedirectResponse("/#rooms", status_code=status.HTTP_303_SEE_OTHER)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    # Payment fails must NOT release the hold.
+    # Keep booking in 'held' status so guest can retry before hold expiry.
+    return RedirectResponse(f"/book/{reference}/pay?failed=1", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/book/{reference}/mock-abandon")

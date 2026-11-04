@@ -49,7 +49,23 @@
 
         <div class="form-group">
           <label for="guest_phone" class="form-label">Phone Number *</label>
-          <input type="tel" id="guest_phone" name="guest_phone" class="form-input" placeholder="+91 98765 43210" required value="{{ form_data.guest_phone if form_data else '' }}">
+          <input type="tel" 
+                 inputmode="tel" 
+                 id="guest_phone" 
+                 name="guest_phone" 
+                 class="form-input" 
+                 placeholder="+91 98765 43210" 
+                 required 
+                 style="{% if phone_error %}border-color: var(--color-accent);{% endif %}"
+                 value="{{ form_data.guest_phone if form_data else '' }}">
+          <p class="caption-line" style="margin-top: 4px; font-size: 0.82rem; color: var(--color-muted);">
+            With country code, e.g. +91 98765 43210
+          </p>
+          {% if phone_error %}
+          <p style="color: var(--color-accent); font-size: 0.82rem; margin-top: 4px; font-weight: 500;">
+            {{ phone_error }}
+          </p>
+          {% endif %}
         </div>
 
         <div class="checkbox-group" style="margin-top: var(--space-4);">
@@ -73,49 +89,50 @@
     <!-- Right Column: Printed Bill Breakdown -->
     <div>
       <div class="tariff-card">
-        <span class="label-caps">SUMMARY OF STAY</span>
-        <h2 style="font-size: 1.4rem;">{{ room.name }}</h2>
-        <p class="caption-line">Plan: {{ rate_plan.name }}</p>
+        <span class="label-caps">STAY SUMMARY</span>
+        <h2 style="font-size: 1.3rem; margin-top: 4px;">{{ room.name }}</h2>
+        <p class="caption-line" style="margin-bottom: var(--space-3);">
+          Plan: {{ rate_plan.name }} &bull; {{ breakdown.nights | length }} {% if breakdown.nights | length == 1 %}Night{% else %}Nights{% endif %}
+        </p>
 
-        <div class="tariff-meta">
-          <div>
-            <strong>Check-in:</strong> {{ check_in | format_date_str }}<br>
-            <strong>Check-out:</strong> {{ check_out | format_date_str }}
-          </div>
-          <div>
-            <strong>Stay:</strong> {{ breakdown.nights | length }} Nights<br>
-            <strong>Guests:</strong> {{ num_guests }} Adults
-          </div>
-        </div>
-
-        <div class="printed-bill" style="border: none; padding: 0; background: transparent;">
-          {% for n in breakdown.nights %}
+        <div class="printed-bill">
           <div class="bill-line">
-            <span>{{ n.date | format_date_short }} (Base rate)</span>
+            <span>Check-in</span>
             <span class="dot-leader"></span>
-            <span class="bill-val">{{ n.base_rate_paise | format_paise }}</span>
+            <span class="bill-val">{{ check_in | format_date_str }}</span>
           </div>
-          {% if n.breakfast_addon_paise > 0 %}
-          <div class="bill-line" style="font-size: 0.85rem; color: var(--color-muted);">
-            <span>&nbsp;&nbsp;+ Gourmet Breakfast add-on</span>
+          <div class="bill-line">
+            <span>Check-out</span>
             <span class="dot-leader"></span>
-            <span class="bill-val">{{ n.breakfast_addon_paise | format_paise }}</span>
+            <span class="bill-val">{{ check_out | format_date_str }}</span>
+          </div>
+          <div class="bill-line">
+            <span>Guests</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">{{ num_guests }} Persons</span>
+          </div>
+
+          <div style="margin: var(--space-3) 0; border-top: 1px dashed var(--color-border);"></div>
+
+          <div class="bill-line">
+            <span>Room Tariff ({{ breakdown.nights | length }} nights)</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">{{ breakdown.room_total_paise | format_paise }}</span>
+          </div>
+
+          {% if breakdown.discount_paise > 0 %}
+          <div class="bill-line" style="color: var(--color-accent);">
+            <span>Promotional Discount ({{ promo_code }})</span>
+            <span class="dot-leader"></span>
+            <span class="bill-val">-{{ breakdown.discount_paise | format_paise }}</span>
           </div>
           {% endif %}
-          {% if n.discount_paise > 0 %}
-          <div class="bill-line" style="font-size: 0.85rem; color: var(--color-accent);">
-            <span>&nbsp;&nbsp;&minus; Promo discount</span>
-            <span class="dot-leader"></span>
-            <span class="bill-val">&minus;{{ n.discount_paise | format_paise }}</span>
-          </div>
-          {% endif %}
-          {% endfor %}
 
-          {% for gst in breakdown.gst_summaries %}
+          {% for slab in breakdown.gst_breakdown %}
           <div class="bill-line">
-            <span>{{ gst.label }}</span>
+            <span>{{ slab.label }}</span>
             <span class="dot-leader"></span>
-            <span class="bill-val">{{ gst.gst_paise | format_paise }}</span>
+            <span class="bill-val">{{ slab.gst_paise | format_paise }}</span>
           </div>
           {% endfor %}
 
@@ -130,17 +147,16 @@
   </div>
 </div>
 
-<!-- Mobile Sticky Bottom Bar -->
-<div class="mobile-sticky-bar">
+<!-- Mobile Sticky Bar for Step 2 -->
+<div class="mobile-sticky-bar no-print">
   <div>
-    <span class="label-caps">TOTAL</span><br>
-    <strong class="bill-val" style="font-size: 1.2rem; color: var(--color-accent);">{{ breakdown.grand_total_paise | format_paise }}</strong>
+    <span class="label-caps" style="font-size: 0.65rem;">TOTAL TARIFF</span>
+    <div style="font-weight: 700; font-size: 1.15rem; color: var(--color-ink);">
+      {{ breakdown.grand_total_paise | format_paise }}
+    </div>
   </div>
-  <div>
-    <button type="button" onclick="document.getElementById('hold-form').requestSubmit();" class="btn btn-primary">
-      Continue &rarr;
-    </button>
-  </div>
+  <button type="submit" form="hold-form" class="btn btn-primary" style="padding: 10px 18px; font-size: 0.95rem;">
+    Continue &rarr;
+  </button>
 </div>
 {% endblock %}
-

@@ -1,4 +1,4 @@
-"""Public enquiry routes with rate limiting, CSRF, and DPDP consent."""
+"""Public enquiry routes with rate limiting, CSRF, DPDP consent, and phone validation."""
 import secrets
 from datetime import date
 from typing import Optional
@@ -11,6 +11,7 @@ from app.config import settings
 from app.db import get_db
 from app.security import generate_csrf_token, check_rate_limit
 from app.services.enquiry_service import process_new_enquiry
+from app.validators import validate_phone_number
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -43,6 +44,7 @@ def get_enquire_page(request: Request):
         "form_token": form_token,
         "success": False,
         "error": None,
+        "phone_error": None,
         "form_data": None
     })
 
@@ -71,48 +73,83 @@ def post_enquiry(
     # 3. Double submit prevention token
     stored_token = request.session.get("enquiry_form_token")
     if not stored_token or stored_token != form_token:
-        # Invalid or reused form token
         return templates.TemplateResponse(request, "enquire.html", {
             "app_name": settings.app_name,
             "csrf_token": get_guest_csrf_token(request),
             "form_token": secrets.token_hex(16),
             "success": False,
             "error": "This form was already submitted or expired. Please refresh and try again.",
+            "phone_error": None,
             "form_data": None
         }, status_code=400)
 
-    # Invalidate token immediately
-    request.session.pop("enquiry_form_token", None)
+    form_data = {
+        "sender_name": sender_name,
+        "sender_contact": sender_contact,
+        "raw_message": raw_message,
+        "preferred_check_in": preferred_check_in,
+        "preferred_check_out": preferred_check_out,
+        "preferred_guests": preferred_guests
+    }
 
-    # 4. DPDP consent check
+    # 4. Contact validation: If sender_contact contains '+' or digits (phone format), validate phone rules
+    # If not email (@), enforce full phone rules
+    contact_val = sender_contact.strip()
+    phone_err = None
+    if "@" not in contact_val:
+        # Validate as phone number
+        is_valid_phone, phone_err, cleaned_phone = validate_phone_number(contact_val)
+        if not is_valid_phone:
+            return templates.TemplateResponse(request, "enquire.html", {
+                "app_name": settings.app_name,
+                "csrf_token": get_guest_csrf_token(request),
+                "form_token": form_token,  # Keep token so user can correct without full reload
+                "success": False,
+                "error": "Please correct the contact number below.",
+                "phone_error": phone_err,
+                "form_data": form_data
+            }, status_code=400)
+        contact_val = cleaned_phone
+    else:
+        # Simple email sanity check
+        if len(contact_val) < 5 or "." not in contact_val:
+            return templates.TemplateResponse(request, "enquire.html", {
+                "app_name": settings.app_name,
+                "csrf_token": get_guest_csrf_token(request),
+                "form_token": form_token,
+                "success": False,
+                "error": "Please enter a valid email address or phone number.",
+                "phone_error": None,
+                "form_data": form_data
+            }, status_code=400)
+
+    # 5. DPDP consent check
     if not dpdp_consent:
         return templates.TemplateResponse(request, "enquire.html", {
             "app_name": settings.app_name,
             "csrf_token": get_guest_csrf_token(request),
-            "form_token": secrets.token_hex(16),
+            "form_token": form_token,
             "success": False,
             "error": "Please provide your consent under the DPDP Act 2023 to proceed.",
-            "form_data": {
-                "sender_name": sender_name,
-                "sender_contact": sender_contact,
-                "raw_message": raw_message,
-                "preferred_check_in": preferred_check_in,
-                "preferred_check_out": preferred_check_out,
-                "preferred_guests": preferred_guests
-            }
+            "phone_error": None,
+            "form_data": form_data
         }, status_code=400)
 
-    # 5. Message length cap (2,000 chars)
+    # 6. Message length cap (2,000 chars)
     trimmed_message = raw_message.strip()
     if len(trimmed_message) > 2000:
         return templates.TemplateResponse(request, "enquire.html", {
             "app_name": settings.app_name,
             "csrf_token": get_guest_csrf_token(request),
-            "form_token": secrets.token_hex(16),
+            "form_token": form_token,
             "success": False,
             "error": "Enquiry message exceeds maximum allowed length of 2,000 characters.",
-            "form_data": None
+            "phone_error": None,
+            "form_data": form_data
         }, status_code=400)
+
+    # Invalidate token only upon passing all validations
+    request.session.pop("enquiry_form_token", None)
 
     # Parse dates & guests if provided
     p_in = None
@@ -139,13 +176,12 @@ def post_enquiry(
         db=db,
         raw_message=trimmed_message,
         sender_name=sender_name.strip(),
-        sender_contact=sender_contact.strip(),
+        sender_contact=contact_val,
         channel="web_form",
         preferred_check_in=p_in,
         preferred_check_out=p_out,
         preferred_guests=p_guests
     )
-    db.commit()
 
     return templates.TemplateResponse(request, "enquire.html", {
         "app_name": settings.app_name,
@@ -154,5 +190,6 @@ def post_enquiry(
         "success": True,
         "enquiry": enquiry,
         "error": None,
+        "phone_error": None,
         "form_data": None
     })

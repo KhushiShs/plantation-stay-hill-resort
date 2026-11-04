@@ -54,7 +54,15 @@
 
       <div style="margin-bottom: 16px;">
         <label for="sender_contact" style="display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Email or Phone Number *</label>
-        <input type="text" id="sender_contact" name="sender_contact" required maxlength="120" style="width: 100%; padding: 10px; border: 1px solid var(--color-border); background: var(--color-paper);" value="{{ form_data.sender_contact if form_data else '' }}">
+        <input type="text" id="sender_contact" name="sender_contact" required maxlength="120" style="width: 100%; padding: 10px; border: 1px solid {% if phone_error %}var(--color-accent){% else %}var(--color-border){% endif %}; background: var(--color-paper);" value="{{ form_data.sender_contact if form_data else '' }}">
+        <p class="caption-line" style="margin-top: 4px; font-size: 0.82rem; color: var(--color-muted);">
+          With country code, e.g. +91 98765 43210 (or email address).
+        </p>
+        {% if phone_error %}
+        <p style="color: var(--color-accent); font-size: 0.82rem; margin-top: 4px; font-weight: 500;">
+          {{ phone_error }}
+        </p>
+        {% endif %}
       </div>
 
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
