@@ -55,10 +55,15 @@
         <!-- Dynamic range warning notice -->
         <div id="calendar-range-msg" style="display: none; background-color: #FDF2F0; border-left: 3px solid var(--color-accent); color: var(--color-accent); padding: var(--space-2) var(--space-3); margin-bottom: var(--space-3); font-size: 0.88rem; font-weight: 500;"></div>
 
+        <!-- Month Navigation Header: [‹] Month YYYY [›] -->
+        <div class="cal-nav-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3);">
+          <button type="button" id="cal-prev-btn" class="cal-nav-btn" aria-label="Previous month" disabled>&lsaquo;</button>
+          <span id="cal-current-month-label" style="font-size: 1.1rem; font-weight: 600;">{{ calendar_months[0].name }}</span>
+          <button type="button" id="cal-next-btn" class="cal-nav-btn" aria-label="Next month" {% if calendar_months | length <= 1 %}disabled{% endif %}>&rsaquo;</button>
+        </div>
+
         {% for month in calendar_months %}
-        <div class="calendar-month" style="margin-bottom: var(--space-5);">
-          <h3 style="font-size: 1.05rem; font-weight: 600; margin-bottom: var(--space-2);">{{ month.name }}</h3>
-          
+        <section class="cal-month" data-month="{{ month.month_iso }}" data-month-name="{{ month.name }}" {% if not month.is_first %}hidden{% endif %}>
           <div class="calendar-grid">
             <div class="cal-day-header">Mon</div>
             <div class="cal-day-header">Tue</div>
@@ -73,9 +78,10 @@
                 <button type="button"
                         class="cal-cell {% if day.sold_out %}sold-out{% endif %} {% if day.is_past %}cal-past{% endif %}"
                         data-date="{{ day.iso }}"
+                        data-price="{{ day.price_paise | format_paise }}"
                         data-available="{{ 'true' if day.available else 'false' }}"
                         data-sold-out="{{ 'true' if day.sold_out else 'false' }}"
-                        {% if day.sold_out or day.is_past %}aria-disabled="true"{% endif %}
+                        {% if day.disabled %}disabled aria-disabled="true"{% endif %}
                         aria-label="{{ day.date.strftime('%d %B %Y') }}{% if day.sold_out %} - Sold out{% elif day.available %} - {{ day.price_paise | format_paise }}{% endif %}">
                   <span class="cal-date">{{ day.day_num }}</span>
                   {% if day.available %}
@@ -94,7 +100,7 @@
               {% endif %}
             {% endfor %}
           </div>
-        </div>
+        </section>
         {% endfor %}
       </div>
     </div>
@@ -162,5 +168,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/room-calendar.js"></script>
+<script src="/static/js/calendar.js" defer></script>
 {% endblock %}

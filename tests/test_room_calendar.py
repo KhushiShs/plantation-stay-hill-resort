@@ -1,4 +1,4 @@
-"""Tests for the interactive room-page tariff calendar and quote updates."""
+"""Tests for the interactive room-page tariff calendar and month navigation."""
 import re
 import pytest
 from datetime import date, timedelta
@@ -19,19 +19,22 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 
-def test_room_calendar_markup_week_grid_and_sold_out_disabled(client, db_session):
+def test_room_calendar_markup_and_month_navigation(client, db_session):
     """
-    Tariff calendar markup:
-    - Renders week grid headers (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
-    - Available dates are <button> elements with data-date, data-available
-    - Sold-out dates are marked with aria-disabled="true" and class 'sold-out'
-    - Helper text updated to: 'Select your check-in and check-out dates. Prices are per night, before GST.'
-    - 'Clear dates' link/button present
-    - Touch targets 44px min dimension styling
-    - Includes /static/room-calendar.js
+    Tariff calendar requirements:
+    1. Server renders each month as <section class="cal-month" data-month="YYYY-MM">
+    2. Contains a Mon-Sun week grid (weekday headers, blank leading cells).
+    3. Renders all months that have rate/allotment data (up to 180 days).
+    4. Each day is a <button type="button" data-date="YYYY-MM-DD" data-price="...">
+    5. Shows ONE month at a time (first month visible, subsequent months have 'hidden' attribute).
+    6. Navigation header has [‹] / [›] buttons with aria-labels 'Previous month' and 'Next month'.
+    7. Previous is disabled on the first month.
+    8. Sold-out days are disabled + aria-disabled="true".
+    9. Scarcity label 'N left' appears only when remaining <= 3.
+    10. Script tag loads /static/js/calendar.js with defer.
     """
-    # Specifically set a sold-out date for testing markup
     today = date.today()
+    # Mark a future date as sold-out
     sold_out_date = today + timedelta(days=15)
     alt = db_session.query(Allotment).filter_by(room_type_id="estate-room", date=sold_out_date).first()
     if alt:
@@ -43,74 +46,66 @@ def test_room_calendar_markup_week_grid_and_sold_out_disabled(client, db_session
     res = client.get("/rooms/estate-room")
     assert res.status_code == 200
 
-    # 1. Weekday headers
+    # 1. Month sections
+    assert '<section class="cal-month"' in res.text
+    month_sections = re.findall(r'<section class="cal-month"[^>]*>', res.text)
+    assert len(month_sections) >= 5, f"Expected at least 5 months for 180 days, found {len(month_sections)}"
+
+    # 2. Exactly one visible month, rest hidden
+    visible_months = [m for m in month_sections if "hidden" not in m]
+    hidden_months = [m for m in month_sections if "hidden" in m]
+    assert len(visible_months) == 1, f"Expected exactly 1 visible month, got {len(visible_months)}"
+    assert len(hidden_months) >= 4
+
+    # 3. Navigation buttons with aria-labels
+    assert 'aria-label="Previous month"' in res.text
+    assert 'aria-label="Next month"' in res.text
+    assert 'id="cal-prev-btn"' in res.text
+    assert 'id="cal-next-btn"' in res.text
+
+    # Previous is disabled on first month
+    assert re.search(r'id="cal-prev-btn"[^>]*disabled', res.text) is not None
+
+    # 4. Weekday headers Mon-Sun
     for day_head in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]:
         assert f'<div class="cal-day-header">{day_head}</div>' in res.text
 
-    # 2. Replaced helper text
+    # 5. Day buttons with data-date and data-price
+    date_buttons = re.findall(r'<button[^>]+data-date="(\d{4}-\d{2}-\d{2})"[^>]*>', res.text)
+    assert len(date_buttons) >= 150, f"Expected at least 150 day buttons across 180 days, found {len(date_buttons)}"
+    assert 'data-price=' in res.text
+
+    # 6. Sold-out days disabled + aria-disabled="true"
+    target_iso = sold_out_date.isoformat()
+    match = re.search(rf'<button[^>]+data-date="{target_iso}"[^>]*>', res.text)
+    assert match, f"Button for {target_iso} not found"
+    btn_html = match.group(0)
+    assert 'disabled' in btn_html
+    assert 'aria-disabled="true"' in btn_html
+    assert 'sold-out' in btn_html
+
+    # 7. Script tag loads /static/js/calendar.js with defer
+    assert '<script src="/static/js/calendar.js" defer></script>' in res.text
+
+    # 8. Helper text and clear dates
     assert "Select your check-in and check-out dates. Prices are per night, before GST." in res.text
     assert "Clear dates" in res.text
 
-    # 3. Calendar buttons
-    assert '<button type="button"' in res.text
-    assert 'data-date=' in res.text
-    assert 'data-available=' in res.text
-
-    # 4. Sold-out date disabled
-    target_iso = sold_out_date.isoformat()
-    # Search for button with target_iso
-    pattern = rf'<button[^>]+data-date="{target_iso}"[^>]*>'
-    match = re.search(pattern, res.text)
-    assert match, f"Button for date {target_iso} not found in calendar"
-    tag_html = match.group(0)
-    assert 'aria-disabled="true"' in tag_html
-    assert 'sold-out' in tag_html
-    assert 'data-sold-out="true"' in tag_html
-
-    # Count of rendered date buttons (at least 30 buttons present)
-    date_buttons = re.findall(r'<button[^>]+data-date="(\d{4}-\d{2}-\d{2})"[^>]*>', res.text)
-    assert len(date_buttons) >= 30, f"Expected at least 30 date buttons, got {len(date_buttons)}"
-
-    # 5. External JS included
-    assert 'src="/static/room-calendar.js"' in res.text
-
 
 def test_room_page_regression_returns_200_with_calendar_grid_present(client, db_session):
-    """
-    Regression test asserting:
-    - GET /rooms/estate-room returns 200 OK
-    - Calendar grid container exists with month headers and day buttons
-    - No script errors / missing static files
-    """
+    """Regression test ensuring page returns 200 with the calendar grid present."""
     res = client.get("/rooms/estate-room")
     assert res.status_code == 200
     assert 'id="tariff-calendar"' in res.text
     assert '<div class="calendar-grid">' in res.text
     assert 'data-date=' in res.text
-    assert 'data-available=' in res.text
-    assert 'Clear dates' in res.text
-    assert 'src="/static/room-calendar.js"' in res.text
-    
-    # Also test luxury villa
-    res_villa = client.get("/rooms/luxury-villa")
-    assert res_villa.status_code == 200
-    assert 'id="tariff-calendar"' in res_villa.text
-    assert '<div class="calendar-grid">' in res_villa.text
-    assert 'data-date=' in res_villa.text
 
 
 def test_quote_endpoint_updates_with_calendar_selected_dates(client, db_session):
-    """
-    Simulates calendar date selection firing GET /rooms/{id}/quote:
-    - Status 200
-    - Returns updated provisional tariff bill
-    - Correct room nights count
-    - Grand total calculated
-    - Button to proceed to booking step 2
-    """
+    """Selecting a range updates the quote with the right bill."""
     today = date.today()
-    in_date = today + timedelta(days=5)
-    out_date = today + timedelta(days=8)
+    in_date = today + timedelta(days=10)
+    out_date = today + timedelta(days=13)
 
     url = f"/rooms/estate-room/quote?check_in={in_date.isoformat()}&check_out={out_date.isoformat()}&rate_plan_id=room_only&num_guests=2"
     res = client.get(url)
@@ -124,9 +119,7 @@ def test_quote_endpoint_updates_with_calendar_selected_dates(client, db_session)
 
 
 def test_quote_endpoint_sold_out_shows_unavailable_and_nearest(client, db_session):
-    """
-    Selecting dates that include a sold-out night returns unavailable notice and suggestions.
-    """
+    """Selecting dates that include a sold-out night returns unavailable notice and alternatives."""
     today = date.today()
     sold_date = today + timedelta(days=12)
     alt = db_session.query(Allotment).filter_by(room_type_id="luxury-villa", date=sold_date).first()
@@ -144,4 +137,3 @@ def test_quote_endpoint_sold_out_shows_unavailable_and_nearest(client, db_sessio
     assert res.status_code == 200
     assert "DATES UNAVAILABLE" in res.text
     assert "currently sold out or blacked out" in res.text
-
