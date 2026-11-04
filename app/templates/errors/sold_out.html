@@ -27,10 +27,19 @@
   </div>
   {% endif %}
 
-  <div style="display: flex; gap: var(--space-3);">
+  <div class="tariff-card" style="margin-bottom: var(--space-5); background: var(--color-paper-light);">
+    <span class="label-caps">FLEXIBLE DATES OR GROUP STAYS</span>
+    <p style="margin: var(--space-2) 0; font-size: 0.95rem; color: var(--color-muted);">
+      Looking for specific dates, multiple rooms, or hosting an event? Send an enquiry directly to our reservations team.
+    </p>
+    <a href="/enquire" class="btn btn-secondary" style="display: inline-block; margin-top: var(--space-2);">
+      Send an Enquiry &rarr;
+    </a>
+  </div>
+
+  <div style="display: flex; gap: var(--space-3); flex-wrap: wrap;">
     <a href="/#rooms" class="btn btn-primary">Browse Other Accommodations</a>
     <a href="/" class="btn btn-secondary">Return Home</a>
   </div>
 </div>
 {% endblock %}
-

@@ -63,4 +63,39 @@
     {% endfor %}
   </div>
 </section>
+
+<!-- Weddings, Offsites & Gatherings Invitation Section -->
+<section id="events" class="container" style="padding: var(--space-6) 0 var(--space-8); border-top: 1px solid var(--color-border);">
+  <div class="tariff-row" style="align-items: center;">
+    <div class="tariff-image-wrap" style="background-color: #698041;">
+      <img src="/static/img/lawn-1200.webp" 
+           srcset="/static/img/lawn-400.webp 400w, /static/img/lawn-768.webp 768w, /static/img/lawn-1200.webp 1200w"
+           sizes="(max-width: 600px) 400px, (max-width: 900px) 768px, 1200px"
+           alt="Manicured estate lawns and gazebo for weddings and offsites at {{ app_name }}" 
+           class="tariff-image" 
+           loading="lazy" 
+           decoding="async"
+           width="1200" 
+           height="800">
+    </div>
+    <div class="tariff-card">
+      <span class="label-caps">ESTATE GATHERINGS & LAWNS</span>
+      <h2>Weddings &amp; Corporate Offsites</h2>
+      <p class="tariff-desc">
+        Expansive estate lawns framed by silver oak shade trees and rolling coffee hills. 
+        Whether you are planning an intimate hill-station wedding, an executive retreat, 
+        or an annual company gathering, our events team crafts tailored stays, dining, and venue setups.
+      </p>
+      <div class="tariff-meta">
+        <span>Capacity: Up to 250 Guests</span>
+        <span>Lawns, Dining Hall &amp; 76 Keys</span>
+      </div>
+      <div style="margin-top: var(--space-4);">
+        <a href="/enquire" class="btn btn-primary" style="display: inline-block;">
+          Plan Your Event &rarr;
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
 {% endblock %}

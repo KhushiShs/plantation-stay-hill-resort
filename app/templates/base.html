@@ -14,8 +14,9 @@
       <a href="/" class="brand">{{ app_name }}</a>
       <nav>
         <ul class="nav-links">
-          <li><a href="/#rooms">Tariff</a></li>
-          <li><a href="/booking-lookup">Find Reservation</a></li>
+          <li><a href="/#rooms">Rooms</a></li>
+          <li><a href="/enquire">Weddings &amp; Events</a></li>
+          <li><a href="#contact">Contact</a></li>
         </ul>
       </nav>
     </div>
@@ -25,9 +26,22 @@
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="site-footer no-print">
+  <footer class="site-footer no-print" id="contact">
     <div class="container footer-inner">
-      <p><strong>{{ app_name }}</strong> — Working Coffee Estate, Chikkamagaluru, Karnataka.</p>
+      <div class="footer-links-row" style="display: flex; flex-wrap: wrap; gap: var(--space-4); justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-4); margin-bottom: var(--space-4);">
+        <nav aria-label="Footer Navigation">
+          <ul class="nav-links" style="display: flex; flex-wrap: wrap; gap: var(--space-4); list-style: none; margin: 0; padding: 0;">
+            <li><a href="/#rooms">Accommodations</a></li>
+            <li><a href="/enquire">Enquire</a></li>
+            <li><a href="/booking-lookup">Look up a Booking</a></li>
+          </ul>
+        </nav>
+        <div>
+          <a href="/staff/login" style="font-size: 0.78rem; color: var(--color-muted); text-decoration: none; opacity: 0.7;">Staff</a>
+        </div>
+      </div>
+
+      <p><strong>{{ app_name }}</strong> &mdash; Working Coffee Estate, Bababudangiri Hills, Chikkamagaluru, Karnataka.</p>
       <p class="caption-line">Direct bookings guaranteed with live estate allotment. All prices quoted in Indian Rupees with applicable GST.</p>
       <p>&copy; 2026 {{ app_name }}. Government Form C compliance: Photo ID and passport details taken at check-in.</p>
     </div>
@@ -35,4 +49,3 @@
   {% block scripts %}{% endblock %}
 </body>
 </html>
-
