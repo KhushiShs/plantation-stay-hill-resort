@@ -45,3 +45,74 @@ def test_seeding_succeeds_when_all_passwords_valid(monkeypatch):
     assert passwords["reservations"] == "SuperSecureResPassword123!"
     assert passwords["gm"] == "SuperSecureGMPassword123!"
     assert passwords["sales"] == "SuperSecureSalesPassword123!"
+
+
+def test_staff_password_upsert_and_login_flow(monkeypatch, db_session):
+    """
+    Test seed with password A, seed again with password B:
+    staff login works with B and fails with A.
+    """
+    from fastapi.testclient import TestClient
+    from app.main import app
+    from app.db import get_db
+    from scripts.seed import seed_database
+    import re
+
+    def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    pwd_a = "InitialSecretPassword123!"
+    pwd_b = "UpdatedSecretPassword456!"
+
+    # 1. Seed with Password A
+    monkeypatch.setenv("DEMO_RESERVATIONS_PASSWORD", pwd_a)
+    monkeypatch.setenv("DEMO_GM_PASSWORD", pwd_a)
+    monkeypatch.setenv("DEMO_SALES_PASSWORD", pwd_a)
+    seed_database(db_session, allow_test=True)
+    db_session.commit()
+
+    with TestClient(app) as client:
+        # Verify login works with password A
+        res_page = client.get("/staff/login")
+        csrf = re.search(r'name="csrf_token"\s+value="([^"]+)"', res_page.text).group(1)
+        r_login_a = client.post("/staff/login", data={
+            "email": "reservations@plantationstay.local",
+            "password": pwd_a,
+            "csrf_token": csrf
+        }, follow_redirects=False)
+        assert r_login_a.status_code == 303
+        assert "/staff/calendar" in r_login_a.headers["location"]
+
+        # 2. Seed again with Password B (UPSERT)
+        monkeypatch.setenv("DEMO_RESERVATIONS_PASSWORD", pwd_b)
+        monkeypatch.setenv("DEMO_GM_PASSWORD", pwd_b)
+        monkeypatch.setenv("DEMO_SALES_PASSWORD", pwd_b)
+        seed_database(db_session, allow_test=True)
+        db_session.commit()
+
+        # Login with old Password A must now fail
+        res_page2 = client.get("/staff/login")
+        csrf2 = re.search(r'name="csrf_token"\s+value="([^"]+)"', res_page2.text).group(1)
+        r_login_old = client.post("/staff/login", data={
+            "email": "reservations@plantationstay.local",
+            "password": pwd_a,
+            "csrf_token": csrf2
+        }, follow_redirects=False)
+        assert r_login_old.status_code == 401
+        assert "Invalid email or password" in r_login_old.text
+
+        # Login with new Password B must now succeed
+        res_page3 = client.get("/staff/login")
+        csrf3 = re.search(r'name="csrf_token"\s+value="([^"]+)"', res_page3.text).group(1)
+        r_login_new = client.post("/staff/login", data={
+            "email": "reservations@plantationstay.local",
+            "password": pwd_b,
+            "csrf_token": csrf3
+        }, follow_redirects=False)
+        assert r_login_new.status_code == 303
+        assert "/staff/calendar" in r_login_new.headers["location"]
+
+    app.dependency_overrides.clear()
+

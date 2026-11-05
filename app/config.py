@@ -2,6 +2,10 @@
 import os
 import secrets
 from typing import List
+from dotenv import load_dotenv
+
+# Load .env into os.environ before reading defaults
+load_dotenv()
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import model_validator
 
@@ -26,7 +30,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     app_name: str = APP_NAME
-    database_url: str = os.getenv("DATABASE_URL", "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_test")
+    database_url: str = os.getenv("DATABASE_URL", "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_dev")
     
     # APP_ENV: 'development' or 'production' (default 'production')
     app_env: str = os.getenv("APP_ENV", os.getenv("ENVIRONMENT", "production")).lower()
@@ -62,7 +66,7 @@ class Settings(BaseSettings):
         self.database_url = normalize_database_url(self.database_url)
 
         # Validate APP_ENV
-        if self.app_env not in ("development", "production"):
+        if self.app_env not in ("development", "production", "test"):
             self.app_env = "production"
 
         # Production requirements: SECRET_KEY and WEBHOOK_SECRET must be set and non-empty

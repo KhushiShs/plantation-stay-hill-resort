@@ -5,6 +5,11 @@ import secrets
 # Ensure tests run under development mode so https_only is False for test client sessions
 os.environ.setdefault("APP_ENV", "development")
 
+# Set test database URL strictly from TEST_DATABASE_URL or fallback to plantation_test
+# Tests must NEVER use the development/production DATABASE_URL from .env
+DEFAULT_TEST_DB_URL = "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_test"
+os.environ["DATABASE_URL"] = os.getenv("TEST_DATABASE_URL", DEFAULT_TEST_DB_URL)
+
 # Generate strong, random test-only passwords for each test run
 TEST_RESERVATIONS_PASSWORD = f"TestRes_{secrets.token_urlsafe(16)}"
 TEST_GM_PASSWORD = f"TestGM_{secrets.token_urlsafe(16)}"
@@ -16,7 +21,7 @@ os.environ["DEMO_SALES_PASSWORD"] = TEST_SALES_PASSWORD
 
 import pytest
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, close_all_sessions
 from app.config import settings
 from app.db import Base
 from scripts.seed import seed_database
@@ -54,6 +59,13 @@ def reset_db_and_rate_limits_per_test():
     1. Truncate all tables and reseed with baseline seed data.
     2. Reset in-memory rate limits.
     """
+    # Strict safety assertion: impossible to truncate a non-_test database
+    active_db = settings.database_url.rsplit("/", 1)[-1].split("?")[0]
+    assert active_db.endswith("_test"), (
+        f"CRITICAL SAFETY VIOLATION: Refusing to truncate non-test database '{active_db}'."
+    )
+
+    close_all_sessions()
     reset_rate_limits()
     
     # Truncate all tables with CASCADE
@@ -65,10 +77,11 @@ def reset_db_and_rate_limits_per_test():
             conn.commit()
 
     with TestSessionLocal() as session:
-        seed_database(session)
+        seed_database(session, allow_test=True)
 
     yield
 
+    close_all_sessions()
     reset_rate_limits()
 
 
