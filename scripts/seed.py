@@ -2,6 +2,11 @@
 import os
 import sys
 from datetime import date, timedelta
+from dotenv import load_dotenv
+
+# Ensure variables from .env are loaded into os.environ
+load_dotenv()
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.db import engine, Base, SessionLocal
@@ -17,6 +22,15 @@ def get_staff_seed_passwords() -> dict:
     MUST be explicitly configured and at least 12 characters long in all environments.
     No fallback passwords exist in the codebase.
     """
+    found_vars = []
+    for var_name in ["DEMO_RESERVATIONS_PASSWORD", "DEMO_GM_PASSWORD", "DEMO_SALES_PASSWORD"]:
+        if os.getenv(var_name):
+            found_vars.append(var_name)
+    if found_vars:
+        print(f"[seed] Found staff password environment variables: {', '.join(found_vars)}")
+    else:
+        print("[seed] No staff password environment variables found.")
+
     res_pwd = os.getenv("DEMO_RESERVATIONS_PASSWORD")
     gm_pwd = os.getenv("DEMO_GM_PASSWORD")
     sales_pwd = os.getenv("DEMO_SALES_PASSWORD")
@@ -43,14 +57,12 @@ def get_staff_seed_passwords() -> dict:
     }
 
 
-def seed_database(session: Session, start_date: date = None) -> None:
-    """Populate database with room types, rates for 180 days, users, slabs, promos."""
-    if start_date is None:
-        start_date = date.today()
-
-    passwords = get_staff_seed_passwords()
-
-    # 1. Users (reservations, gm, sales)
+def upsert_staff_users(session: Session, passwords: dict) -> None:
+    """
+    UPSERT the three core staff users (reservations, gm, sales).
+    If the email exists, update the password hash from the current env values;
+    otherwise insert.
+    """
     users_data = [
         ("reservations@plantationstay.local", passwords["reservations"], "Reservations Desk", "reservations"),
         ("gm@plantationstay.local", passwords["gm"], "General Manager", "gm"),
@@ -58,7 +70,12 @@ def seed_database(session: Session, start_date: date = None) -> None:
     ]
     for email, pwd, name, role in users_data:
         existing = session.scalar(select(User).where(User.email == email))
-        if not existing:
+        if existing:
+            existing.hashed_password = hash_password(pwd)
+            existing.full_name = name
+            existing.role = role
+            existing.is_active = True
+        else:
             u = User(
                 email=email,
                 hashed_password=hash_password(pwd),
@@ -67,6 +84,25 @@ def seed_database(session: Session, start_date: date = None) -> None:
                 is_active=True
             )
             session.add(u)
+
+
+def seed_database(session: Session, start_date: date = None, allow_test: bool = False) -> None:
+    """Populate database with room types, rates for 180 days, users, slabs, promos."""
+    # Safety check: Refuse to run on databases ending in _test unless --allow-test or allow_test=True
+    from app.config import settings
+    db_name = settings.database_url.rsplit("/", 1)[-1].split("?")[0]
+    if db_name.endswith("_test") and not allow_test:
+        raise RuntimeError(
+            f"Database safety error: Refusing to seed test database '{db_name}' without --allow-test."
+        )
+
+    if start_date is None:
+        start_date = date.today()
+
+    passwords = get_staff_seed_passwords()
+
+    # 1. Users (reservations, gm, sales) - UPSERT
+    upsert_staff_users(session, passwords)
 
     # 2. Room Types (64 rooms + 12 villas = 76 keys)
     # Estate Room Rs 7,000 weekday / Rs 9,000 weekend (base 700000 paise)
@@ -216,9 +252,18 @@ def seed_database(session: Session, start_date: date = None) -> None:
 
 
 def main():
+    import argparse
+    from app.config import settings
+    db_name = settings.database_url.rsplit("/", 1)[-1].split("?")[0]
+    print(f"[seed] Connected to database: {db_name}")
+
+    parser = argparse.ArgumentParser(description="Seed estate database with initial reference data.")
+    parser.add_argument("--allow-test", action="store_true", help="Explicitly allow seeding databases ending with _test.")
+    args = parser.parse_args()
+
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as session:
-        seed_database(session)
+        seed_database(session, allow_test=args.allow_test)
         print("Database seeded successfully!")
 
 

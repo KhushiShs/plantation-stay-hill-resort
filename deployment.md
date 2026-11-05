@@ -44,9 +44,10 @@ This document details the local setup, cloud deployment on Render + Neon Postgre
    ```sql
    CREATE DATABASE plantation_stay;
    ```
-2. Set `DATABASE_URL` in your `.env` file:
+2. Set `DATABASE_URL` and `TEST_DATABASE_URL` in your `.env` file (DATABASE_URL = dev database, TEST_DATABASE_URL = test database, never the same):
    ```env
-   DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_stay
+   DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_dev
+   TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_test
    ```
 3. Set `DEMO_RESERVATIONS_PASSWORD`, `DEMO_GM_PASSWORD`, and `DEMO_SALES_PASSWORD` in `.env` to any passwords of your choice (minimum 12 characters each).
 4. Run schema initialization:
@@ -83,7 +84,8 @@ Configure the required environment variable values in the Render Dashboard (**En
 | Variable Name | Description | Example / Notes |
 | :--- | :--- | :--- |
 | `APP_ENV` | Environment mode (`production` or `development`) | `production` |
-| `DATABASE_URL` | Neon PostgreSQL pooled connection URI | `postgresql://<db_user>:<db_password>@<db_host>/<db_name>?sslmode=require` |
+| `DATABASE_URL` | Application database connection URI (dev/prod database, never the test database) | `postgresql://<db_user>:<db_password>@<db_host>/<db_name>?sslmode=require` |
+| `TEST_DATABASE_URL` | Dedicated test database URI (DATABASE_URL = dev database, TEST_DATABASE_URL = test database, never the same) | `postgresql+psycopg://postgres:postgres@127.0.0.1:5432/plantation_test` |
 | `SECRET_KEY` | Cryptographic secret for session cookie encryption | Generate via `openssl rand -hex 32` |
 | `WEBHOOK_SECRET` | HMAC SHA256 secret for mock payment verification | Generate via `openssl rand -hex 32` |
 | `ALLOWED_HOSTS` | Comma-separated allowed hostnames for HTTP Host header | `localhost,127.0.0.1,plantation-stay.onrender.com,*.onrender.com` |
